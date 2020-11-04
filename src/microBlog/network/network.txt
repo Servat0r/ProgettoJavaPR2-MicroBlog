@@ -1,0 +1,3 @@
+Descrizione del package:
+Questo package contiene la descrizione del tipo di dato SocialNetwork, i.e. la rappresentazione
+della rete sociale corrente, e i test (package-level) relativi.  
