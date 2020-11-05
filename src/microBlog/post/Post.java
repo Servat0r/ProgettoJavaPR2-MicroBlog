@@ -41,5 +41,11 @@ public interface Post extends Cloneable {
 	 */
 	public Set<Tag> getTags();
 	
-	public Object clone();
+	/**
+	 * Dichiarazione del metodo Cloneable.clone() per renderlo staticamente disponibile ad oggetti
+	 * di tipo statico Post.
+	 * 
+	 * @return Una safe-copy del Post corrente.
+	 */
+	Object clone();
 }

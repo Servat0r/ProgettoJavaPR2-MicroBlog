@@ -1,7 +1,5 @@
 package microBlog.post;
 
-import java.io.Serializable;
-
-public enum Visibility implements Serializable {
+public enum Visibility {
 	ME, FOLLOWERS, ALL;
 }

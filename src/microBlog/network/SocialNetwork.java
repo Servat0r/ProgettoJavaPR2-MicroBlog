@@ -12,17 +12,19 @@ import microBlog.post.*;
  * - aggiunta e/o rimozione di utenti;
  * - determinazione della sotto-rete sociale individuata da una lista di post;
  * - determinazione degli utenti col maggior numero di followers ("influencers");
- * - determinazione di tutti gli utenti menzionati nei post presenti;
+ * - determinazione di tutti gli utenti menzionati (taggati) nei post presenti;
  * - determinazione dell'insieme dei post scritti da un utente;
  * - la lista dei post presenti nella rete sociale che includono almeno una parola presente in una
  * specifica lista;
- * - metodi di salvataggio /caricamento dei dati degli utenti (post) per effettuare tali analisi.
+ * - metodi di salvataggio /caricamento dei dati degli utenti (post) per effettuare tali analisi,
+ * tutti assolutamente reference-safe, i.e. non violano la barriera di astrazione dei dati interni.
  * 
  * @author Salvatore Correnti
- *
  */
 
 public interface SocialNetwork {
+	
+	//Post methods
 	
 	/**
 	 * @requires post != null
@@ -44,24 +46,37 @@ public interface SocialNetwork {
 	 */
 	public boolean storePost(Post post);
 	
-/*	/**
-	 * @requires id > 0
-	 * @param id
-	 * 			L'id del post da caricare.
-	 * @return Il post identificato da id, se presente.
-	 * @return null se non esiste alcun post con identificativo id.
-	 * @throws IllegalArgumentException se id <= 0.
-	 *
-	public Post loadPost(int id); */
+	/**
+	 * @requires post != null
+	 * @param post
+	 * 			Il post da rimuovere.
+	 * @return Se post è presente, questi viene rimosso e ritorna true. Se non è presente,
+	 * non fa nulla e ritorna false.
+	 * @throws NPE se post == null
+	 */
+	public boolean removePost(Post post); //TODO Meglio void o boolean?
 	
 	/**
-	 * @requires id > 0
-	 * @param id
-	 * 			L'identificatore del post da rimuovere.
-	 * @return Se presente un post con identificativo id, questi viene rimosso e ritorna true.
-	 * @return Se non presente un pst con tale identificativo, non fa nulla e ritorna false.
+	 * @requires user != null && this.isRegistered(user)
+	 * @param user
+	 * 			L'utente di cui si vogliono caricare i post.
+	 * @return Un Set<Post> che contiene tutti i post di user.
+	 * @throws NPE se user == null
+	 * @throws IllegalArgumentException se !this.isRegistered(user)
 	 */
-	public boolean removePost(int id); //TODO Meglio void o boolean?
+	public List<Post> loadAllPosts(String user);
+	
+	/**
+	 * @requires user != null && this.isRegistered(user)
+	 * @param user
+	 * 			L'utente di cui si vogliono rimuovere i post.
+	 * @effects Tutti i post di user vengono eliminati dalla rete.
+	 * @throws NPE se user == null
+	 * @throws IllegalArgumentException se !this.isRegistered(user)
+	 */
+	public void removeAllPosts(String user);
+	
+	//User methods
 	
 	/**
 	 * @requires user != null
@@ -93,6 +108,21 @@ public interface SocialNetwork {
 	public void removeUser(String user);
 	
 	/**
+	 * @requires
+	 * @return Un Set<String> che contiene gli identificativi di tutti gli utenti.
+	 * @return null se la rete non ha utenti.
+	 */
+	public Set<String> loadAllUsers();
+	
+	/**
+	 * @requires
+	 * @effects Tutti gli utenti sono rimossi dalla rete (e i loro post eliminati).
+	 */
+	public void removeAllUsers();
+	
+	//Following methods
+	
+	/**
 	 * @requires following != null && followed != null
 	 * @param following
 	 * 				L'utente che potrebbe star seguendo followed.
@@ -119,58 +149,48 @@ public interface SocialNetwork {
 	public void followUser(String follower, String followed);
 	
 	/**
-	 * @requires unfollower != null && unfollowed != null && (!unfollower.equals(unfollowed))
+	 * @requires unfollower != null && unfollowed != null
 	 * @param unfollower
 	 * 					L'utente che smetterà di seguire.
 	 * @param unfollowed
 	 * 					L'utente che non sarà più seguito.
 	 * @effects this.isFollowing(follower, followed) => false.
-	 * @throws NPE se follower == null
-	 * @throws NPE se followed == null
-	 * @throws IllegalArgumentException se follower.equals(followed)
+	 * @throws NPE se unfollower == null
+	 * @throws NPE se unfollowed == null
 	 */
 	public void unfollowUser(String unfollower, String unfollowed);
 	
 	/**
-	 * @requires user != null
+	 * @requires user != null && this.isRegistered(user)
 	 * @param user
-	 * 			L'utente di cui si vogliono caricare i post.
-	 * @return Un Set<Post> che contiene tutti i post di user.
-	 * @return null se !this.isRegistered(user)
+	 * 			L'utente che deve smettere di seguire tutti.
+	 * @effects Forall String u : this.isRegistered(u), this.isFollowing(user, u) => false.
 	 * @throws NPE se user == null
+	 * @throws IllegalArgumentException se !this.isRegistered(user)
 	 */
-	public List<Post> loadAllPosts(String user);
+	public void unFollowAll(String user);
 	
 	/**
 	 * @requires user != null && this.isRegistered(user)
 	 * @param user
-	 * 			L'utente di cui si vogliono rimuovere i post.
-	 * @effects Tutti i post di user vengono eliminati dalla rete.
+	 * 			L'utente che tutti devono smettere di seguire.
+	 * @effects forall String u : this.isRegistered(u), this.isFollowing(u, user) => false.
 	 * @throws NPE se user == null
-	 * @throws IllegalArgumentException se this.isRegistered(user)
+	 * @throws IllegalArgumentException se !this.isRegistered(user)
 	 */
-	public void removeAllPosts(String user);
+	public void getUnfollowedByAll(String user);
 	
+	//Analysis methods
+
 	/**
-	 * @requires
-	 * @return Un Set<String> che contiene gli identificativi di tutti gli utenti.
-	 * @return null se la rete non ha utenti.
-	 */
-	public Set<String> loadAllUsers();
-	
-	/**
-	 * @requires
-	 * @effects Tutti gli utenti sono rimossi dalla rete (e i loro post eliminati).
-	 */
-	public void removeAllUsers();
-	
-	/**
-	 * @requires ps != null
+	 * @requires ps != null && forall Post p : ps, (p != null && this.isRegistered(p.getAuthor())
 	 * @param ps
 	 * 		La lista di post da controllare.
 	 * @return Una Map<String, Set<String>> che rappresenta la sotto-rete sociale individuata dalla
 	 * lista ps.
 	 * @throws NPE se ps == null
+	 * @throws IllegalArgumentException se esiste Post p : ps | p == null
+	 * @throws IllegalArgumentException se esiste Post p : ps | !this.isRegistered(p.getAuthor())
 	 */
 	public Map<String, Set<String>> guessFollowers(List<Post> ps);
 	
@@ -182,26 +202,29 @@ public interface SocialNetwork {
 	public Set<String> getMentionedUsers();
 	
 	/**
-	 * @requires ps != null
+	 * @requires ps != null && forall Post p : ps, (p != null && this.isRegistered(p.getAuthor())
 	 * @param ps
 	 * 			La lista di post da controllare.
 	 * @return Un Set<String> che contiene tutti gli utenti registrati menzionati (taggati)
 	 * nella lista di post.
 	 * @throws NPE se ps == null
+	 * @throws IllegalArgumentException se esiste Post p : ps | p == null
+	 * @throws IllegalArgumentException se esiste Post p : ps | !this.isRegistered(p.getAuthor())
 	 */
 	public Set<String> getMentionedUsers(List<Post> ps);
 	
 	/**
-	 * @requires
+	 * @requires username != null && this.isRegistered(username)
 	 * @param username
 	 * 				Lo username dell'utente.
 	 * @return Una List<Post> che contiene tutti i post scritti da username.
-	 * @return null se !this.isRegistered(username).
+	 * @throws NPE se username == null
+	 * @throws IllegalArgumentException se !this.isRegistered(username)
 	 */
 	public List<Post> writtenBy(String username);
 	
 	/**
-	 * @requires ps != null
+	 * @requires ps != null && forall Post p : ps, (p != null && this.isRegistered(p.getAuthor())
 	 * @param ps
 	 * 			La lista di post da controllare.
 	 * @param username
@@ -210,16 +233,19 @@ public interface SocialNetwork {
 	 * vuota se non ce n'è nessuno!).
 	 * @return null se !this.isRegistered(username).
 	 * @throws NPE se ps == null
+	 * @throws IllegalArgumentException se esiste Post p : ps | p == null
+	 * @throws IllegalArgumentException se esiste Post p : ps | !this.isRegistered(p.getAuthor())
 	 */
 	public List<Post> writtenBy(List<Post> ps, String username);
 	
 	/**
-	 * @requires words != null
+	 * @requires words != null && forall String s : words, s != null
 	 * @param words
-	 * 			Una lista di stringhe che contiene le parole da cercare.
+	 * 			Una lista di stringhe che contiene le parole da cercare, senza valori null.
 	 * @return Una List<Post> che contiene tutti i post nella rete che contengono almeno una delle
 	 * parole specificate in words.
 	 * @throws NPE se words == null.
+	 * @throws IllegalArgumentException se esiste String s : words | s == null
 	 */
 	public List<Post> containing(List<String> words);
 }

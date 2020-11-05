@@ -9,18 +9,25 @@ import java.util.Set;
 
 import microBlog.post.*;
 
-public final class SocialNetworkImpl implements SocialNetwork {
+/**
+ * Implementazione dell'interfaccia SocialNetwork.
+ * 
+ * @author Salvatore Correnti
+ *
+ * @see SocialNetwork 
+ */
+public class SocialNetworkImpl implements SocialNetwork {
 
 	/**
 	 * Una Map che rappresenta tutti i post nella rete. 
-	 * Per ogni String s : this.posts.containsKey(s), this.posts.(?)(s) è l'insieme di tutti i
+	 * Per ogni String s : this.posts.containsKey(s), this.posts.get(s) è l'insieme di tutti i
 	 * post pubblicati dall'utente s.
 	 */
 	private Map<String,Set<Post>> posts;
 	
 	/**
 	 * Una Map che rappresenta tutte le connessioni nella rete. 
-	 * Per ogni String s: this.network.containsKey(s), this.network.(?)(s) è l'insieme di tutti 
+	 * Per ogni String s: this.network.containsKey(s), this.network.get(s) è l'insieme di tutti 
 	 * gli utenti che sono seguiti da s.
 	 */
 	private Map<String, Set<String>> network;
@@ -29,12 +36,8 @@ public final class SocialNetworkImpl implements SocialNetwork {
 	
 	public boolean containsPost(Post post) {
 		if (post == null) throw new NullPointerException();
-		boolean b = false;
-		for (Set<Post> sp : this.posts.values()) {
-			b = b || sp.contains(post);
-			if (b) break;
-		}
-		return b;
+		String author = post.getAuthor();
+		return this.posts.get(author).contains(post);
 	}
 
 	public boolean storePost(Post post) {
@@ -44,15 +47,10 @@ public final class SocialNetworkImpl implements SocialNetwork {
 		return this.posts.get(author).add(post);
 	}
 	
-	public boolean removePost(int id) {
-		if (id <= 0) throw new IllegalArgumentException();
-		Post p = new PostImpl(id, "", "", Visibility.ALL, new HashSet<Tag>());
-		boolean b = false;
-		for (String user : this.posts.keySet()) {
-			b = b || this.posts.get(user).remove(p);
-			if (b) break;
-		}
-		return b;
+	public boolean removePost(Post post) {
+		if (post == null) throw new NullPointerException();
+		String author = post.getAuthor();
+		return this.posts.get(author).remove(post);
 	}
 	
 	public List<Post> loadAllPosts(String user) {
@@ -89,16 +87,18 @@ public final class SocialNetworkImpl implements SocialNetwork {
 		this.network.put(user, t);
 	}
 	
-	public Set<String> loadAllUsers() {
-		return this.network.keySet();
-	}
-	
 	public void removeUser(String user) {
+		if (user == null) throw new NullPointerException();
+		if (!this.isRegistered(user)) throw new IllegalArgumentException();
 		this.removeAllPosts(user); //Tutti i post rimossi
 		this.posts.remove(user); //Rimosso da chi può postare
 		this.unFollowAll(user); //Smette di seguire tutti
 		this.getUnfollowedByAll(user); //Tutti smettono di seguirlo
-		this.network.remove(user); //Rimosso da chi può seguire
+		this.network.remove(user); //Rimosso da chi può seguire ed essere seguito
+	}
+	
+	public Set<String> loadAllUsers() {
+		return this.network.keySet();
 	}
 	
 	public void removeAllUsers() {
@@ -127,29 +127,41 @@ public final class SocialNetworkImpl implements SocialNetwork {
 	public void unFollowAll(String user) {
 		if (user == null) throw new NullPointerException();
 		if (!this.isRegistered(user)) throw new IllegalArgumentException();		
-		for (String u : this.network.keySet()) {
-			this.unfollowUser(user, u);
-		}
+		for (String u : this.network.keySet()) this.unfollowUser(user, u);
 	}
 	
 	public void getUnfollowedByAll(String user) {
 		if (user == null) throw new NullPointerException();
 		if (!this.isRegistered(user)) throw new IllegalArgumentException();
-		for (String u : this.network.keySet()) {
-			this.unfollowUser(u, user);
+		for (String u : this.network.keySet()) this.unfollowUser(u, user);
+	}
+	
+	//Analysis methods
+	
+	/**
+	 * Private method used for checking (recurrent) exceptions in the following methods.
+	 * @param ps
+	 * 			La lista da controllare.
+	 * @throws NPE se ps == null
+	 * @throws IllegalArgumentException se esiste Post p : ps | p == null
+	 * @throws IllegalArgumentException se esiste Post p : ps | this.isRegistered(p.getAuthor())
+	 */
+	private void  checkForExceptions(List<Post> ps) {
+		if (ps == null) throw new NullPointerException();
+		for (Post p : ps) {
+			if (p == null) throw new IllegalArgumentException();
+			if (this.isRegistered(p.getAuthor())) throw new IllegalArgumentException();
 		}
 	}
 	
 	//TODO Ma in che senso la rete sociale sottostante? Sulla base dei tags?
 	public Map<String, Set<String>> guessFollowers(List<Post> ps) {
+		checkForExceptions(ps);
 		Map<String, Set<String>> map = new HashMap<String, Set<String>>();
 		return null;
 	}
 	
-	//Other methods
-	
 	public Set<String> getMentionedUsers() {
-		 
 		Set<String> s = new HashSet<String>();
 		List<Post> l;
 		for (String us : this.posts.keySet()) {
@@ -160,6 +172,7 @@ public final class SocialNetworkImpl implements SocialNetwork {
 	}
 
 	public Set<String> getMentionedUsers(List<Post> ps) {
+		checkForExceptions(ps);
 		Set<String> s = new HashSet<String>();
 		Set<Tag> ts = new HashSet<Tag>();
 		for (Post p : ps) ts.addAll(p.getTags());
@@ -176,6 +189,9 @@ public final class SocialNetworkImpl implements SocialNetwork {
 	}
 	
 	public List<Post> writtenBy(List<Post> ps, String username) {
+		checkForExceptions(ps);
+		if (username == null) throw new NullPointerException();
+		if (!this.isRegistered(username)) throw new IllegalArgumentException();
 		List<Post> l = new ArrayList<Post>();
 		for (Post p : ps) {
 			if (p.getAuthor() == username) l.add((Post)p.clone());
@@ -185,6 +201,10 @@ public final class SocialNetworkImpl implements SocialNetwork {
 
 	//TODO Ma ignorando upper/lower case?
 	public List<Post> containing(List<String> words) {
+		if (words == null) throw new NullPointerException();
+		for (String w : words) {
+			if (w == null || !this.isRegistered(w)) throw new IllegalArgumentException();
+		}
 		List<Post> l = new ArrayList<Post>();
 		boolean b;
 		for (Set<Post> sp : this.posts.values()) {
