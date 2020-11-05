@@ -1,3 +1,6 @@
 /bin/
 Notes.txt
 /doc/
+.classpath
+.project
+.settings/

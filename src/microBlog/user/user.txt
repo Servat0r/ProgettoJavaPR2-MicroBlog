@@ -1,4 +1,0 @@
-Questo package contiene le funzionalità offerte all'utente del social, in particolare:
- - creare un nuovo post;
- - modificare la visibilità dei propri post;
- - 

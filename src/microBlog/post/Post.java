@@ -1,8 +1,9 @@
 package microBlog.post;
 
+import java.util.Date;
 import java.util.Set;
 
-public interface Post {
+public interface Post extends Cloneable {
 
 	/**
 	 * @requires 
@@ -32,7 +33,7 @@ public interface Post {
 	 * @requires
 	 * @return La data e l'ora di pubblicazione del post.
 	 */
-	public String getTimeStamp(); //Rivedere meglio
+	public Date getTimeStamp();
 	
 	/**
 	 * @requires
