@@ -4,7 +4,7 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 
-final class PostImpl implements Post {
+public final class PostImpl implements Post {
 	
 	private int id;
 	private String author;
@@ -35,7 +35,7 @@ final class PostImpl implements Post {
 		return true;
 	}
 	
-	PostImpl(int id, String author, String text, Visibility scope, Set<Tag> tags) {
+	public PostImpl(int id, String author, String text, Visibility scope, Set<Tag> tags) {
 	if (id <= 0) throw new IllegalArgumentException("Id cannot be <= 0!");
 	if (author == null) throw new NullPointerException("");
 	if (text == null) throw new NullPointerException("");
@@ -79,7 +79,7 @@ final class PostImpl implements Post {
 		return t;
 	}
 	
-	protected Object clone() {
+	public Object clone() {
 		return new PostImpl(this.id, this.getAuthor(), this.getText(), this.getVisibilityScope(),
 				this.getTags());
 	}

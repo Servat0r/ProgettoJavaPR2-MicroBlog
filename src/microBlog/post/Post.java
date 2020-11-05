@@ -40,4 +40,6 @@ public interface Post extends Cloneable {
 	 * @return L'insieme dei tag nel post.
 	 */
 	public Set<Tag> getTags();
+	
+	public Object clone();
 }

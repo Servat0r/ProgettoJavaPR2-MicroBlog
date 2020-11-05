@@ -1,6 +1,6 @@
 package microBlog.post;
 
-interface Tag extends Cloneable {
+public interface Tag extends Cloneable {
 
 	/**
 	 * @requires

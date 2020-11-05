@@ -37,20 +37,31 @@ public interface SocialNetwork {
 	 * @requires post != null && !this.containsPost(post)
 	 * @param post
 	 * 			Il post da aggiungere.
-	 * @effects Aggiunge il post alla rete sociale.
+	 * @return Aggiunge il post alla rete sociale e ritorna true se l'operazione è riuscita, 
+	 * false altrimenti.
 	 * @throws NPE se post == null
+	 * @throws IllegalArgumentException se this.containsPost(post)
 	 */
-	public void storePost(Post post);
+	public boolean storePost(Post post);
 	
-	/**
+/*	/**
 	 * @requires id > 0
 	 * @param id
 	 * 			L'id del post da caricare.
 	 * @return Il post identificato da id, se presente.
 	 * @return null se non esiste alcun post con identificativo id.
 	 * @throws IllegalArgumentException se id <= 0.
+	 *
+	public Post loadPost(int id); */
+	
+	/**
+	 * @requires id > 0
+	 * @param id
+	 * 			L'identificatore del post da rimuovere.
+	 * @return Se presente un post con identificativo id, questi viene rimosso e ritorna true.
+	 * @return Se non presente un pst con tale identificativo, non fa nulla e ritorna false.
 	 */
-	public Post loadPost(int id);
+	public boolean removePost(int id); //TODO Meglio void o boolean?
 	
 	/**
 	 * @requires user != null
@@ -128,7 +139,7 @@ public interface SocialNetwork {
 	 * @return null se !this.isRegistered(user)
 	 * @throws NPE se user == null
 	 */
-	public Set<Post> loadAllPosts(String user);
+	public List<Post> loadAllPosts(String user);
 	
 	/**
 	 * @requires user != null && this.isRegistered(user)
