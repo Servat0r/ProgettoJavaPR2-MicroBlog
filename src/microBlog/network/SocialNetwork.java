@@ -56,15 +56,6 @@ public interface SocialNetwork {
 	 */
 	public boolean removePost(Post post); //TODO Meglio void o boolean?
 	
-	/**
-	 * @requires user != null && this.isRegistered(user)
-	 * @param user
-	 * 			L'utente di cui si vogliono caricare i post.
-	 * @return Un Set<Post> che contiene tutti i post di user.
-	 * @throws NPE se user == null
-	 * @throws IllegalArgumentException se !this.isRegistered(user)
-	 */
-	public List<Post> loadAllPosts(String user);
 	
 	/**
 	 * @requires user != null && this.isRegistered(user)
@@ -109,8 +100,9 @@ public interface SocialNetwork {
 	
 	/**
 	 * @requires
-	 * @return Un Set<String> che contiene gli identificativi di tutti gli utenti.
-	 * @return null se la rete non ha utenti.
+	 * @return Un Set<String> che contiene gli identificativi di tutti gli utenti, vuoto se la
+	 * rete non ha utenti (garantisce che modifiche di questo set non influiscono sulla rete
+	 * sociale).
 	 */
 	public Set<String> loadAllUsers();
 	
@@ -158,7 +150,7 @@ public interface SocialNetwork {
 	 * @throws NPE se unfollower == null
 	 * @throws NPE se unfollowed == null
 	 */
-	public void unfollowUser(String unfollower, String unfollowed);
+	public void unFollowUser(String unfollower, String unfollowed);
 	
 	/**
 	 * @requires user != null && this.isRegistered(user)
@@ -178,7 +170,7 @@ public interface SocialNetwork {
 	 * @throws NPE se user == null
 	 * @throws IllegalArgumentException se !this.isRegistered(user)
 	 */
-	public void getUnfollowedByAll(String user);
+	public void getUnFollowedByAll(String user);
 	
 	//Analysis methods
 
@@ -212,7 +204,7 @@ public interface SocialNetwork {
 	 * @throws IllegalArgumentException se esiste Post p : ps | !this.isRegistered(p.getAuthor())
 	 */
 	public Set<String> getMentionedUsers(List<Post> ps);
-	
+		
 	/**
 	 * @requires username != null && this.isRegistered(username)
 	 * @param username

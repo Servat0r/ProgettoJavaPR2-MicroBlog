@@ -16,7 +16,7 @@ import microBlog.post.*;
  *
  * @see SocialNetwork 
  */
-public class SocialNetworkImpl implements SocialNetwork {
+public class MicroBlog implements SocialNetwork {
 
 	/**
 	 * Una Map che rappresenta tutti i post nella rete. 
@@ -53,17 +53,6 @@ public class SocialNetworkImpl implements SocialNetwork {
 		return this.posts.get(author).remove(post);
 	}
 	
-	public List<Post> loadAllPosts(String user) {
-		if (user == null) throw new NullPointerException();
-		if (!this.isRegistered(user)) throw new IllegalArgumentException();
-		List<Post> sp = new ArrayList<Post>();
-		for (Post p : this.posts.get(user)) {
-			sp.add(new PostImpl(p.getId(), p.getAuthor(), p.getText(), p.getVisibilityScope(),
-					p.getTags()));
-		}
-		return sp;
-	}
-	
 	public void removeAllPosts(String user) {
 		if (user == null) throw new NullPointerException();
 		if (!this.isRegistered(user)) throw new IllegalArgumentException();
@@ -77,7 +66,7 @@ public class SocialNetworkImpl implements SocialNetwork {
 		return this.network.containsKey(user);
 	}
 
-	public void registerUser(String user) {
+	public void registerUser(String user) { 
 		if (user == null) throw new NullPointerException();
 		if (this.isRegistered(user)) throw new IllegalArgumentException();
 		//Inserisce due insiemi vuoti di post e di persone seguite.
@@ -93,15 +82,21 @@ public class SocialNetworkImpl implements SocialNetwork {
 		this.removeAllPosts(user); //Tutti i post rimossi
 		this.posts.remove(user); //Rimosso da chi può postare
 		this.unFollowAll(user); //Smette di seguire tutti
-		this.getUnfollowedByAll(user); //Tutti smettono di seguirlo
+		this.getUnFollowedByAll(user); //Tutti smettono di seguirlo
 		this.network.remove(user); //Rimosso da chi può seguire ed essere seguito
 	}
 	
-	public Set<String> loadAllUsers() {
-		return this.network.keySet();
+	public Set<String> loadAllUsers() { //Safe
+		Set<String> t = this.network.keySet(); //Modificare questo set modifica anche la Map
+		Set<String> res = new HashSet<String>();
+		for (String s : t) {
+			String w = new String(s);
+			res.add(w);
+		}
+		return res; //In questo modo le modifiche non hanno effetti sulla Map
 	}
 	
-	public void removeAllUsers() {
+	public void removeAllUsers() { //Chiaramente qui non ci sono problemi di modifiche
 		 this.network.clear();
 		 this.posts.clear();
 	}
@@ -119,7 +114,7 @@ public class SocialNetworkImpl implements SocialNetwork {
 		this.network.get(follower).add(followed);
 	}
 
-	public void unfollowUser(String unfollower, String unfollowed) {
+	public void unFollowUser(String unfollower, String unfollowed) {
 		if (unfollower == null || unfollowed == null) throw new NullPointerException();		 
 		this.network.get(unfollower).remove(unfollowed);
 	}
@@ -127,13 +122,13 @@ public class SocialNetworkImpl implements SocialNetwork {
 	public void unFollowAll(String user) {
 		if (user == null) throw new NullPointerException();
 		if (!this.isRegistered(user)) throw new IllegalArgumentException();		
-		for (String u : this.network.keySet()) this.unfollowUser(user, u);
+		for (String u : this.network.keySet()) this.unFollowUser(user, u);
 	}
 	
-	public void getUnfollowedByAll(String user) {
+	public void getUnFollowedByAll(String user) {
 		if (user == null) throw new NullPointerException();
 		if (!this.isRegistered(user)) throw new IllegalArgumentException();
-		for (String u : this.network.keySet()) this.unfollowUser(u, user);
+		for (String u : this.network.keySet()) this.unFollowUser(u, user);
 	}
 	
 	//Analysis methods
@@ -154,24 +149,24 @@ public class SocialNetworkImpl implements SocialNetwork {
 		}
 	}
 	
-	//TODO Ma in che senso la rete sociale sottostante? Sulla base dei tags?
+	//FIXME Ma in che senso la rete sociale sottostante? Sulla base dei tags?
 	public Map<String, Set<String>> guessFollowers(List<Post> ps) {
 		checkForExceptions(ps);
 		Map<String, Set<String>> map = new HashMap<String, Set<String>>();
 		return null;
 	}
 	
-	public Set<String> getMentionedUsers() {
+	public Set<String> getMentionedUsers() { //Safe
 		Set<String> s = new HashSet<String>();
 		List<Post> l;
 		for (String us : this.posts.keySet()) {
-			l = this.loadAllPosts(us);
+			l = this.writtenBy(us);
 			s.addAll(this.getMentionedUsers(l));
 		}
 		return s;
 	}
 
-	public Set<String> getMentionedUsers(List<Post> ps) {
+	public Set<String> getMentionedUsers(List<Post> ps) { //Safe
 		checkForExceptions(ps);
 		Set<String> s = new HashSet<String>();
 		Set<Tag> ts = new HashSet<Tag>();
@@ -180,45 +175,79 @@ public class SocialNetworkImpl implements SocialNetwork {
 		return s;
 	}
 	
-	public List<Post> writtenBy(String username) {
-		List<Post> l = new ArrayList<Post>();
+	public List<Post> writtenBy(String username) { //Safe
+		if (username == null) throw new NullPointerException();
+		if (!this.isRegistered(username)) throw new IllegalArgumentException();
+		List<Post> sp = new ArrayList<Post>();
 		for (Post p : this.posts.get(username)) {
-			l.add((Post)p.clone());
+			sp.add((Post)p.clone());
 		}
-		return l;
+		return sp;
 	}
 	
-	public List<Post> writtenBy(List<Post> ps, String username) {
+	public List<Post> writtenBy(List<Post> ps, String username) { //Safe
 		checkForExceptions(ps);
 		if (username == null) throw new NullPointerException();
 		if (!this.isRegistered(username)) throw new IllegalArgumentException();
 		List<Post> l = new ArrayList<Post>();
 		for (Post p : ps) {
-			if (p.getAuthor() == username) l.add((Post)p.clone());
+			if (p.getAuthor().equals(username)) l.add((Post)p.clone());
+		}
+		return l;
+	}
+	
+	/**
+	 * Metodo privato di supporto a containing(List<String>). Verifica se post contiene almeno
+	 * una parola in words.
+	 * @param post Il post da controllare.
+	 * @param words La lista di parole da esaminare.
+	 * @return true se almeno una parola in words è contenuta in post.getText(), false altrimenti.
+	 * @throws NPE se post == null
+	 * @throws NPE se words == null
+	 * @throws IllegalArgumentException se esiste String w : words | w == null
+	 */
+	private boolean postContains(Post post, List<String> words) {
+		if (post == null) throw new NullPointerException();
+		if (words == null) throw new NullPointerException();
+		for (String w : words) {
+			if (w == null) throw new IllegalArgumentException(); //FIXME Sicuro che vada bene così?
+			if (post.getText().indexOf(w) != -1) return true;
+		}
+		return false;
+	}
+	/**
+	 * Metodo privato di supporto a containing(List<String>).
+	 * @param user L'utente di cui si analizzano i post.
+	 * @param words Le parole da analizzare.
+	 * @return Una List<Post> che contiene esattamente i post scritti da user che contengono
+	 * almeno una parola fra quelle fornite in words.
+	 * @throws NPE se user == null
+	 * @throws NPE se words == null
+	 * @throws IllegalArgumentException se esiste String w : words | w == null
+	 */
+	private List<Post> containingInUserPosts(String user, List<String> words){ //Safe
+		if (user == null) throw new NullPointerException();
+		if (words == null) throw new NullPointerException();
+		for (String w : words) {
+			if (w == null) throw new IllegalArgumentException();
+		}
+		List<Post> l = new ArrayList<Post>();
+		for(Post p : this.posts.get(user)) {
+			if (postContains(p, words)) {
+				l.add((Post)p.clone());
+			}
 		}
 		return l;
 	}
 
-	//TODO Ma ignorando upper/lower case?
-	public List<Post> containing(List<String> words) {
+	public List<Post> containing(List<String> words) { //Safe
 		if (words == null) throw new NullPointerException();
 		for (String w : words) {
-			if (w == null || !this.isRegistered(w)) throw new IllegalArgumentException();
+			if (w == null) throw new IllegalArgumentException();
 		}
 		List<Post> l = new ArrayList<Post>();
-		boolean b;
-		for (Set<Post> sp : this.posts.values()) {
-			for (Post p : sp) {
-				b = false;
-				for (String w : words) {
-					if (p.getText().indexOf(w) != -1) { //Il testo di p contiene w
-						l.add((Post)p.clone()); //Aggiungiamo dunque il post corrente
-						b = true; //Per proseguire
-						break; //Usciamo
-					}
-				}
-				if (b) continue; //Andiamo al prossimo post
-			}
+		for (String user : this.posts.keySet()) {
+			l.addAll(containingInUserPosts(user, words));
 		}
 		return l;
 	}

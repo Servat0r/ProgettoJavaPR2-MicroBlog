@@ -1,4 +1,4 @@
-Unhecked methods:
+Unchecked methods:
 Analysis methods
 
 Tested methods:
