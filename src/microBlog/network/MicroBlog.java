@@ -3,11 +3,16 @@ package microBlog.network;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 import microBlog.post.*;
+import microBlog.user.*;
+
 
 /**
  * Implementazione dell'interfaccia SocialNetwork.
@@ -20,114 +25,261 @@ public class MicroBlog implements SocialNetwork {
 
 	/**
 	 * Una Map che rappresenta tutti i post nella rete. 
-	 * Per ogni String s : this.posts.containsKey(s), this.posts.get(s) è l'insieme di tutti i
-	 * post pubblicati dall'utente s.
+	 * Per ogni String s : this.posts.containsKey(s), this.posts.get(s) è 
+	 * l'insieme di tutti i post pubblicati dall'utente s.
 	 */
 	private Map<String,Set<Post>> posts;
 	
 	/**
 	 * Una Map che rappresenta tutte le connessioni nella rete. 
-	 * Per ogni String s: this.network.containsKey(s), this.network.get(s) è l'insieme di tutti 
-	 * gli utenti che sono seguiti da s.
+	 * Per ogni String s: this.network.containsKey(s), this.network.get(s) è 
+	 * l'insieme di tutti gli utenti che sono seguiti da s.
 	 */
 	private Map<String, Set<String>> network;
+	
+	/**
+	 * Un insieme ordinato di Pair che contengono il numero di followers per ogni
+	 * utente della rete, utilizzato principalmente per il metodo
+	 * {@link #influencers()}.
+	 */
+	private SortedSet<Pair<String>> followersCount;
+	
+	/**
+	 * Costruttore di default, inizializza posts e network a due mappe vuote e 
+	 * followersCount a un SOrtedSet vuoto.
+	 */
+	public MicroBlog() {
+		this.posts = new HashMap<String, Set<Post>>();
+		this.network = new HashMap<String, Set<String>>();
+		this.followersCount = new TreeSet<Pair<String>>();
+	}
 	
 	//Post methods
 	
 	public boolean containsPost(Post post) {
 		if (post == null) throw new NullPointerException();
-		String author = post.getAuthor();
+		String author = post.getAuthor().getUsername();
+		if (!this.posts.containsKey(author)) return false; //Non ha mai postato
 		return this.posts.get(author).contains(post);
 	}
 
 	public boolean storePost(Post post) {
 		if (post == null) throw new NullPointerException();
 		if (this.containsPost(post)) throw new IllegalArgumentException("Post is already stored!");
-		String author = post.getAuthor();
+		if (!this.isRegistered(post.getAuthor().getUsername()))
+			throw new PermissionDeniedException(); //L'utente non è nella rete
+		/* Grazie a quanto sopra possiamo affermare che this.contains(post) =>
+		   this.isRegistered(post.getAuthor().getUsername()) */
+		if (!post.getAuthor().hasSentRequest()) throw new PermissionDeniedException();
+		if (post.getText() == null) throw new PostException();
+		String author = post.getAuthor().getUsername();
+		if (!this.posts.containsKey(author)) { //Non ha mai postato
+			Set<Post> sp = new HashSet<>();
+			this.posts.put(author, sp);
+		}
 		return this.posts.get(author).add(post);
 	}
 	
 	public boolean removePost(Post post) {
 		if (post == null) throw new NullPointerException();
-		String author = post.getAuthor();
-		return this.posts.get(author).remove(post);
+		if (!this.containsPost(post)) throw new PostException();
+		if (!post.getAuthor().hasSentRequest()) throw new PermissionDeniedException();
+		String author = post.getAuthor().getUsername();
+		boolean b = this.posts.get(author).remove(post);
+		TextPost tp = (TextPost)post;
+		User exLiker;
+		User exLiked = post.getAuthor();
+		if (b) {
+			for (Like l : tp.getLikes()) {
+				exLiker = l.getAuthor();
+				if (getLikesCount(exLiker, exLiked) == 0) 
+					b = b && unFollowUser(exLiker.getUsername(), exLiked.getUsername());
+			}
+		}
+		return b;
 	}
 	
-	public void removeAllPosts(String user) {
-		if (user == null) throw new NullPointerException();
-		if (!this.isRegistered(user)) throw new IllegalArgumentException();
-		for (Post p : this.posts.get(user)) this.posts.remove(user, p);
+	/**
+	 * @requires username != null &amp; this.isRegistered(username)
+	 * @param username
+	 * 			Lo username dell'utente di cui si vogliono rimuovere i post.
+	 * @effects Tutti i post di user vengono eliminati dalla rete.
+	 * @throws NullPointerException se user == null
+	 * @throws IllegalArgumentException se !this.isRegistered(user)
+	 */
+	private void removeAllPosts(String username) {
+		if (username == null) throw new NullPointerException();
+		if (!this.isRegistered(username)) throw new IllegalArgumentException();
+		Iterator<Post> ip = this.posts.get(username).iterator();
+		while (ip.hasNext()) {
+			TextPost tp = (TextPost)ip.next();
+			ip.remove();
+			User exLiker;
+			User exLiked = tp.getAuthor();
+			for (Like l : tp.getLikes()) {
+				exLiker = l.getAuthor();
+				if (getLikesCount(exLiker, exLiked) == 0) 
+					unFollowUser(exLiker.getUsername(), exLiked.getUsername());
+			}
+		}
 	}
 	
 	//User methods
 	
-	public boolean isRegistered(String user) {
-		if (user == null) throw new NullPointerException();
-		return this.network.containsKey(user);
+	public boolean isRegistered(String username) {
+		if (username == null) throw new NullPointerException();
+		return this.network.containsKey(username);
 	}
 
-	public void registerUser(String user) { 
+	public void registerUser(User user) { 
 		if (user == null) throw new NullPointerException();
-		if (this.isRegistered(user)) throw new IllegalArgumentException();
+		if (this.isRegistered(user.getUsername())) throw new UserException();
+		if (!user.hasSentRequest()) throw new PermissionDeniedException();
 		//Inserisce due insiemi vuoti di post e di persone seguite.
-		Set<Post> s = new HashSet<Post>();
+		Set<Post> sp = new HashSet<Post>();
 		Set<String> t = new HashSet<String>();
-		this.posts.put(user, s);
-		this.network.put(user, t);
+		this.posts.put(user.getUsername(), sp);
+		this.network.put(user.getUsername(), t);
+		System.out.println("Aggiunta a conta followers: " + //FIXME
+				this.followersCount.add(new Pair<String>(0, user.getUsername())));
 	}
 	
-	public void removeUser(String user) {
+	public boolean removeUser(User user) {
 		if (user == null) throw new NullPointerException();
-		if (!this.isRegistered(user)) throw new IllegalArgumentException();
-		this.removeAllPosts(user); //Tutti i post rimossi
-		this.posts.remove(user); //Rimosso da chi può postare
-		this.unFollowAll(user); //Smette di seguire tutti
-		this.getUnFollowedByAll(user); //Tutti smettono di seguirlo
-		this.network.remove(user); //Rimosso da chi può seguire ed essere seguito
-	}
-	
-	public Set<String> loadAllUsers() { //Safe
-		Set<String> t = this.network.keySet(); //Modificare questo set modifica anche la Map
-		Set<String> res = new HashSet<String>();
-		for (String s : t) {
-			String w = new String(s);
-			res.add(w);
+		String username = user.getUsername();
+		if (!this.isRegistered(username)) throw new UserException();
+		if (!user.hasSentRequest()) throw new PermissionDeniedException();
+		this.removeAllPosts(username); //Tutti i post rimossi
+		boolean b = true;
+		this.posts.remove(username); //Rimosso da chi può postare
+		for (String otherUser : this.posts.keySet()) {
+			for (Post p : this.posts.get(otherUser)) {
+				 for (Like l : ((TextPost)p).getLikes()) {
+					 if (l.getAuthor().equals(user)) 
+						 b = b && this.removeLike(user, p);
+				 }
+			}
 		}
-		return res; //In questo modo le modifiche non hanno effetti sulla Map
-	}
-	
-	public void removeAllUsers() { //Chiaramente qui non ci sono problemi di modifiche
-		 this.network.clear();
-		 this.posts.clear();
+		this.unFollowAll(username); //Smette di seguire tutti
+		this.getUnFollowedByAll(username); //Tutti smettono di seguirlo
+		this.network.remove(username); //Rimosso da chi può seguire ed essere seguito
+		Iterator<Pair<String>> ips = this.followersCount.iterator();
+		Pair<String> p;
+		while (ips.hasNext()) {
+			p = ips.next();
+			if (p.getSecond().equals(user.getUsername())) ips.remove();
+		}
+		return b;
 	}
 	
 	//Following methods
 
 	public boolean isFollowing(String following, String followed) {
-		if (following == null || followed == null) throw new NullPointerException();
+		if (following == null) throw new NullPointerException();
+		if (followed == null) throw new NullPointerException();
 		return this.network.get(following).contains(followed);
 	}
 	
-	public void followUser(String follower, String followed) {
+	/**
+	 * @requires follower != null &amp; followed != null &amp; (!follower.equals(followed))
+	 * @param follower
+	 * 				Il futuro follower.
+	 * @param followed
+	 * 				Il futuro followed.
+	 * @effects this.isFollowing(follower, followed) diventa true.
+	 * @return true se follower ha cominciato a seguire followed correttamente,
+	 * false altrimenti.
+	 * @throws NullPointerException se follower == null
+	 * @throws NullPointerException se followed == null
+	 * @throws UserException se follower.equals(followed)
+	 */
+	private boolean followUser(String follower, String followed) {
 		if (follower == null || followed == null) throw new NullPointerException();
-		if (follower.equals(followed)) throw new IllegalArgumentException();
-		this.network.get(follower).add(followed);
+		if (follower.equals(followed)) throw new UserException();
+		boolean b = this.network.get(follower).add(followed);
+		if (b) {
+			Iterator<Pair<String>> ips = this.followersCount.iterator();
+			Pair<String> p = null;
+			while (ips.hasNext()) {
+				p = ips.next();
+				System.out.println("Prossimo utente" + p.toString()); //FIXME
+				if (p.getSecond().equals(followed)) {
+					ips.remove();
+					break;
+				}
+			}
+			if (p != null) {
+				p.setFirst(p.getFirst() + 1);
+				this.followersCount.add(p);
+			}
+		}
+		return b;
 	}
 
-	public void unFollowUser(String unfollower, String unfollowed) {
-		if (unfollower == null || unfollowed == null) throw new NullPointerException();		 
-		this.network.get(unfollower).remove(unfollowed);
+	/**
+	 * @requires unfollower != null &amp; unfollowed != null &amp;
+	 * this.isRegistered(unfollower) &amp; this.isRegistered(unfollowed)
+	 * @param unfollower
+	 * 					L'utente che smetterà di seguire.
+	 * @param unfollowed
+	 * 					L'utente che non sarà più seguito.
+	 * @effects this.isFollowing(follower, followed) diventa false.
+	 * @return true se unfollowed ha smesso di essere sguito da unfollower,
+	 * false altrimenti
+	 * @throws NullPointerException se unfollower == null
+	 * @throws NullPointerException se unfollowed == null
+	 * @throws UserException se !this.isRegistered(unfollower)
+	 * @throws UserException se !this.isRegistered(unfollowed)
+	 */
+	private boolean unFollowUser(String unfollower, String unfollowed) {
+		if (unfollower == null) throw new NullPointerException();
+		if (unfollowed == null) throw new NullPointerException();
+		if (!this.isRegistered(unfollower)) throw new UserException();
+		if (!this.isRegistered(unfollower)) throw new UserException();
+		boolean b = this.network.get(unfollower).remove(unfollowed);
+		if (b) {
+			Iterator<Pair<String>> ips = this.followersCount.iterator();
+			Pair<String> p = null;
+			while (ips.hasNext()) {
+				p = ips.next();
+				if (p.getSecond().equals(unfollowed)) {
+					ips.remove();
+					break;
+				}
+			}
+			if (p != null) {
+				p.setFirst(p.getFirst() - 1);
+				this.followersCount.add(p);
+			}
+		}
+		return b;
 	}
 	
-	public void unFollowAll(String user) {
+	/**
+	 * @requires user != null &amp; this.isRegistered(user)
+	 * @param user
+	 * 			L'utente che deve smettere di seguire tutti.
+	 * @effects Forall String u : this.isRegistered(u), this.isFollowing(user, u) diventa false.
+	 * @throws NullPointerException se user == null
+	 * @throws UserException se !this.isRegistered(user)
+	 */
+	private void unFollowAll(String user) {
 		if (user == null) throw new NullPointerException();
-		if (!this.isRegistered(user)) throw new IllegalArgumentException();		
+		if (!this.isRegistered(user)) throw new UserException();		
 		for (String u : this.network.keySet()) this.unFollowUser(user, u);
 	}
 	
-	public void getUnFollowedByAll(String user) {
+	/**
+	 * @requires user != null &amp; this.isRegistered(user)
+	 * @param user
+	 * 			L'utente che tutti devono smettere di seguire.
+	 * @effects forall String u : this.isRegistered(u), this.isFollowing(u, user) diventa false.
+	 * @throws NullPointerException se user == null
+	 * @throws UserException se !this.isRegistered(user)
+	 */
+	private void getUnFollowedByAll(String user) {
 		if (user == null) throw new NullPointerException();
-		if (!this.isRegistered(user)) throw new IllegalArgumentException();
+		if (!this.isRegistered(user)) throw new UserException();
 		for (String u : this.network.keySet()) this.unFollowUser(u, user);
 	}
 	
@@ -137,26 +289,40 @@ public class MicroBlog implements SocialNetwork {
 	 * Private method used for checking (recurrent) exceptions in the following methods.
 	 * @param ps
 	 * 			La lista da controllare.
-	 * @throws NPE se ps == null
-	 * @throws IllegalArgumentException se esiste Post p : ps | p == null
-	 * @throws IllegalArgumentException se esiste Post p : ps | this.isRegistered(p.getAuthor())
+	 * @throws NullPointerException se ps == null
+	 * @throws PostException se esiste Post p : ps | p == null
+	 * @throws PostException se esiste Post p : ps | !this.isRegistered(p.getAuthor())
 	 */
 	private void  checkForExceptions(List<Post> ps) {
 		if (ps == null) throw new NullPointerException();
 		for (Post p : ps) {
-			if (p == null) throw new IllegalArgumentException();
-			if (this.isRegistered(p.getAuthor())) throw new IllegalArgumentException();
+			if (p == null) throw new PostException();
+			if (!this.isRegistered(p.getAuthor().getUsername())) throw new PostException();
 		}
 	}
 	
-	//FIXME Ma in che senso la rete sociale sottostante? Sulla base dei tags?
+	//TODO Va fatta così?
 	public Map<String, Set<String>> guessFollowers(List<Post> ps) {
 		checkForExceptions(ps);
 		Map<String, Set<String>> map = new HashMap<String, Set<String>>();
-		return null;
+		String s;
+		for (Post p : ps) {
+			s = p.getAuthor().getUsername();
+			map.putIfAbsent(s, new HashSet<String>());
+			for (Like l : ((TextPost)p).getLikes()) 
+				map.get(s).add(l.getPost().getAuthor().getUsername());
+		}
+		return map;
 	}
 	
-	public Set<String> getMentionedUsers() { //Safe
+	public List<String> influencers() {
+		List<String> infl = new ArrayList<>(this.network.keySet().size());
+		//Sono inseriti in ordine
+		for (Pair<String> p : this.followersCount) infl.add(p.getSecond());
+		return infl;
+	}
+	
+	public Set<String> getMentionedUsers() {
 		Set<String> s = new HashSet<String>();
 		List<Post> l;
 		for (String us : this.posts.keySet()) {
@@ -170,17 +336,17 @@ public class MicroBlog implements SocialNetwork {
 		checkForExceptions(ps);
 		Set<String> s = new HashSet<String>();
 		Set<Tag> ts = new HashSet<Tag>();
-		for (Post p : ps) ts.addAll(p.getTags());
+		for (Post p : ps) ts.addAll(((TextPost)p).getTags());
 		for (Tag t : ts) s.add(t.getTagText());
 		return s;
 	}
 	
 	public List<Post> writtenBy(String username) { //Safe
 		if (username == null) throw new NullPointerException();
-		if (!this.isRegistered(username)) throw new IllegalArgumentException();
+		if (!this.isRegistered(username)) throw new UserException();
 		List<Post> sp = new ArrayList<Post>();
 		for (Post p : this.posts.get(username)) {
-			sp.add((Post)p.clone());
+			sp.add(p);
 		}
 		return sp;
 	}
@@ -188,41 +354,45 @@ public class MicroBlog implements SocialNetwork {
 	public List<Post> writtenBy(List<Post> ps, String username) { //Safe
 		checkForExceptions(ps);
 		if (username == null) throw new NullPointerException();
-		if (!this.isRegistered(username)) throw new IllegalArgumentException();
+		if (ps == null) throw new NullPointerException();
+		if (!this.isRegistered(username)) throw new UserException();
+		for (Post p : ps) {
+			if (p == null) throw new PostException();
+			if (!this.isRegistered(p.getAuthor().getUsername())) 
+				throw new PostException();
+		}
 		List<Post> l = new ArrayList<Post>();
 		for (Post p : ps) {
-			if (p.getAuthor().equals(username)) l.add((Post)p.clone());
+			if (p.getAuthor().getUsername().equals(username)) l.add(p);
 		}
 		return l;
 	}
 	
 	/**
-	 * Metodo privato di supporto a containing(List<String>). Verifica se post contiene almeno
+	 * Metodo privato di supporto a containing(List di String). Verifica se post contiene almeno
 	 * una parola in words.
 	 * @param post Il post da controllare.
 	 * @param words La lista di parole da esaminare.
 	 * @return true se almeno una parola in words è contenuta in post.getText(), false altrimenti.
-	 * @throws NPE se post == null
-	 * @throws NPE se words == null
+	 * @throws NullPointerException se post == null
+	 * @throws NullPointerException se words == null
 	 * @throws IllegalArgumentException se esiste String w : words | w == null
 	 */
 	private boolean postContains(Post post, List<String> words) {
 		if (post == null) throw new NullPointerException();
 		if (words == null) throw new NullPointerException();
-		for (String w : words) {
-			if (w == null) throw new IllegalArgumentException(); //FIXME Sicuro che vada bene così?
-			if (post.getText().indexOf(w) != -1) return true;
-		}
+		for (String w : words) if (w == null) throw new IllegalArgumentException();
+		for (String w : words) if (post.getText().indexOf(w) != -1) return true;
 		return false;
 	}
 	/**
-	 * Metodo privato di supporto a containing(List<String>).
+	 * Metodo privato di supporto a containing(List di String).
 	 * @param user L'utente di cui si analizzano i post.
 	 * @param words Le parole da analizzare.
-	 * @return Una List<Post> che contiene esattamente i post scritti da user che contengono
+	 * @return Una List di Post che contiene esattamente i post scritti da user che contengono
 	 * almeno una parola fra quelle fornite in words.
-	 * @throws NPE se user == null
-	 * @throws NPE se words == null
+	 * @throws NullPointerException se user == null
+	 * @throws NullPointerException se words == null
 	 * @throws IllegalArgumentException se esiste String w : words | w == null
 	 */
 	private List<Post> containingInUserPosts(String user, List<String> words){ //Safe
@@ -234,7 +404,7 @@ public class MicroBlog implements SocialNetwork {
 		List<Post> l = new ArrayList<Post>();
 		for(Post p : this.posts.get(user)) {
 			if (postContains(p, words)) {
-				l.add((Post)p.clone());
+				l.add(p);
 			}
 		}
 		return l;
@@ -250,5 +420,109 @@ public class MicroBlog implements SocialNetwork {
 			l.addAll(containingInUserPosts(user, words));
 		}
 		return l;
+	}
+	
+	/**
+	 * @requires id &gt; 0 &amp; username != null &amp; this.isRegistered(username)
+	 * @param id L'id del post.
+	 * @param username Lo username dell'autore del post.
+	 * @return Il TextPost scritto da username, se esiste
+	 * @throws IllegalArgumentException se id &le; 0
+	 * @throws NullPointerException se username == null
+	 * @throws UserException se this.isRegistered(username)
+	 * @throws PostException se non esiste un post di username con questo id.
+	 */
+	public TextPost getPost(int id, String username) {
+		if (id <= 0) throw new IllegalArgumentException();
+		List<Post> ltp = this.writtenBy(username);
+		for (Post tp : ltp) {
+			if (tp.getId() == id) return (TextPost)tp;
+		}
+		throw new PostException("Questo id non è associato con nessun post della rete!");
+	}
+
+	public boolean addLike(User user, Post post) {
+		if (user == null) throw new NullPointerException();
+		if (post == null) throw new NullPointerException();
+		if (!this.containsPost(post)) throw new PostException(); /* Se la rete corrente
+		contiene post, allora necessariamente il suo autore è registrato */
+		if (!this.isRegistered(user.getUsername())) throw new UserException();
+		if (this.isLikedByUser(post, user.getUsername()))
+			throw new PermissionDeniedException();
+		if (!user.hasSentRequest()) throw new PermissionDeniedException();
+		String liker = user.getUsername();
+		String liked = post.getAuthor().getUsername();
+		boolean b = this.posts.get(liked).remove(post);
+		Like l = new Like(user, post);
+		TextPost tp = ((TextPost)post);
+		Set<Like> sl = new HashSet<Like>(tp.getLikes());
+		sl.add(l);
+		tp = tp.copy(sl); //Viene creato un nuovo oggetto (!)
+		b = b && this.posts.get(liked).add(tp); /*Se è false allora qualcosa 
+		non ha funzionato */
+		if (b && !isFollowing(liker, liked)) b = b && followUser(liker, liked);
+		return b;
+	}
+
+	public boolean removeLike(User user, Post post) {
+		if (user == null) throw new NullPointerException();
+		if (post == null) throw new NullPointerException();		
+		if (!this.containsPost(post)) throw new PostException();
+		if (!this.isRegistered(user.getUsername())) throw new UserException();
+		if (!this.isLikedByUser(post, user.getUsername()))
+			throw new PermissionDeniedException();
+		if (!user.hasSentRequest()) throw new PermissionDeniedException();
+		String unLiker = user.getUsername();
+		String unLiked = post.getAuthor().getUsername();
+		boolean b = this.posts.get(unLiked).remove(post);
+		Like l = null; //Da usare per rimuovere
+		for (Like lp : ((TextPost)post).getLikes()) {
+			if (lp.getAuthor() == user) l = lp;
+		}
+		// l != null per quanto sopra
+		TextPost tp = ((TextPost)post);
+		Set<Like> sl = new HashSet<Like>(tp.getLikes());
+		System.out.println("Rimozione like: " + sl.remove(l)); //FIXME Ma perché lo fa 2 volte?
+		tp = tp.copy(sl); //Viene creato un nuovo oggetto (!)
+		b = this.posts.get(unLiked).add(tp) && b; /*Se è false allora qualcosa 
+		non ha funzionato */
+		if (this.getLikesCount(user, post.getAuthor()) == 0) unFollowUser(unLiker, unLiked); 
+		return b;
+	}
+	
+	/**
+	 * @requires liker != null &amp; liked != null &amp; 
+	 * this.isRegistered(liker.getUsername()) &amp; this.isRegistered(liked.getUsername())
+	 * @param liker L'utente che potrebbe aver messo dei like
+	 * @param liked L'utente che potrebbe aver ricevuto dei like
+	 * @return Il numero di likes di liker a liked.
+	 * @throws NullPointerException se liker == null
+	 * @throws NullPointerException se liked == null
+	 * @throws UserException se !this.isRegistered(liker)
+	 * @throws UserException se !this.isRegistered(liked)
+	 */
+	private int getLikesCount(User liker, User liked) {
+		if (liker == null) throw new NullPointerException();
+		if (liked == null) throw new NullPointerException();
+		String likerName =liker.getUsername();
+		String likedName = liked.getUsername();
+		if (!this.isRegistered(likerName)) throw new UserException();
+		if (!this.isRegistered(likedName)) throw new UserException();
+		int result = 0;
+		for (Post p : this.posts.get(likedName)) {
+			TextPost tp = (TextPost)p;
+			if (tp.getLikes().contains(new Like(liker, p))) result++;
+		}
+		return result;
+	}
+
+	public boolean isLikedByUser(Post post, String username) {
+		if (post == null) throw new NullPointerException();
+		if (username == null) throw new NullPointerException();
+		if (!this.isRegistered(post.getAuthor().getUsername())) throw new UserException();
+		if (!this.isRegistered(username)) throw new UserException();
+		Set<Like> sl = ((TextPost)post).getLikes();
+		for (Like l : sl) if (l.getAuthor().getUsername().equals(username)) return true;
+		return false;
 	}
 }

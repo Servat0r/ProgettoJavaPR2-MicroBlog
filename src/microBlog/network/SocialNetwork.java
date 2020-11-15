@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import microBlog.post.*;
+import microBlog.user.User;
+import microBlog.user.UserException;
 
 /**
  * Modella una rete sociale in cui sono presenti diversi utenti che possono seguire altri utenti e
@@ -31,212 +33,227 @@ public interface SocialNetwork {
 	 * @param post 
 	 * 			Il post da cercare.
 	 * @return true se il post è presente nella rete sociale, false altrimenti.
-	 * @throws NPE se post == null
+	 * @throws NullPointerException se post == null
 	 */
 	public boolean containsPost(Post post);
 	
 	/**
-	 * @requires post != null && !this.containsPost(post)
+	 * @requires post != null &amp; !this.containsPost(post) &amp; 
+	 * post.getText() != null &amp; this.isRegistered(post.getAuthor()) &amp; 
+	 * post.getAuthor().hasSentRequest()
 	 * @param post
 	 * 			Il post da aggiungere.
-	 * @return Aggiunge il post alla rete sociale e ritorna true se l'operazione è riuscita, 
-	 * false altrimenti.
-	 * @throws NPE se post == null
-	 * @throws IllegalArgumentException se this.containsPost(post)
+	 * @return Se l'autore di post è registrato e ha mandato una richiesta a questa
+	 * rete sociale, aggiunge il post alla medesima e ritorna true se l'operazione è 
+	 * riuscita, false altrimenti.
+	 * @throws NullPointerException se post == null
+	 * @throws PostException se this.containsPost(post)
+	 * @throws PermissionDeniedException se !this.isRegistered(post.getAuthor())
+	 * @throws PermissionDeniedException se !post.getAuthor().hasSentRequest()
 	 */
 	public boolean storePost(Post post);
 	
 	/**
-	 * @requires post != null
-	 * @param post
-	 * 			Il post da rimuovere.
-	 * @return Se post è presente, questi viene rimosso e ritorna true. Se non è presente,
-	 * non fa nulla e ritorna false.
-	 * @throws NPE se post == null
+	 * @requires post != null &amp; this.containsPost(post) &amp; 
+	 * post.getAuthor().hasSentRequest()
+	 * @param post Il post da rimuovere.
+	 * @return Se l'autore di post ha mandato una richiesta a questa rete sociale e
+	 * post è presente, questi viene rimosso e per ogni altro utente user che dopo la
+	 * rimozione non ha più alcun like ai post di post.getAuthor(), questi non viene
+	 * più seguito da user; ritorna true se tutte queste operazioni sono riuscite,
+	 * false altrimenti. 
+	 * @throws NullPointerException se post == null
+	 * @throws PostException se !this.containsPost(post)
+	 * @throws PermissionDeniedException se !post.getAuthor().hasSentRequest()
 	 */
-	public boolean removePost(Post post); //TODO Meglio void o boolean?
-	
-	
-	/**
-	 * @requires user != null && this.isRegistered(user)
-	 * @param user
-	 * 			L'utente di cui si vogliono rimuovere i post.
-	 * @effects Tutti i post di user vengono eliminati dalla rete.
-	 * @throws NPE se user == null
-	 * @throws IllegalArgumentException se !this.isRegistered(user)
-	 */
-	public void removeAllPosts(String user);
+	public boolean removePost(Post post);
 	
 	//User methods
 	
 	/**
-	 * @requires user != null
-	 * @param user 
-	 * 			L'utente che potrebbe essere registrato.
-	 * @return true se l'utente è registrato, false altrimenti.
-	 * @throws NPE se user == null
+	 * @requires username != null
+	 * @param username 
+	 * 			Lo username dell'utente che potrebbe essere registrato: si è scelto
+	 * 			di avere username di tipo stringa anziché User per facilitare la
+	 * 			ricerca di un utente di nome username, dato che un tale metodo non
+	 * 			ha bisogno di protezioni.
+	 * @return true se l'utente è registrato (i.e., esiste un utente user t.c.
+	 * user.getName().equals(username)), false altrimenti.
+	 * @throws NullPointerException se username == null
 	 */
-	public boolean isRegistered(String user);
+	public boolean isRegistered(String username);
+	
 	/**
-	 * @requires user != null &&!this.isRegistered(user)
+	 * @requires user != null &amp;!this.isRegistered(user.getName()) 
+	 * &amp; user.hasSentRequest() 
 	 * @param user
 	 * 			L'utente da registrare.
-	 * @effects this.isRegistered(user) => true.
-	 * @throws NPE se user == null
-	 * @throws IllegalArgumentException se this.isRegistered(user).
+	 * @effects this.isRegistered(user) diventa true.
+	 * @throws NullPointerException se user == null
+	 * @throws UserException se this.isRegistered(user)
+	 * @throws PermissionDeniedException se !user.hasSentRequest()
 	 */
-	public void registerUser(String user);
+	public void registerUser(User user);
 	
 	/**
-	 * @requires user != null && this.isRegistered(user)
+	 * @requires user != null &amp; this.isRegistered(user.getName()) 
+	 * &amp; user.hasSentRequest()
 	 * @param user
 	 * 			L'utente da rimuovere.
-	 * @effects this.isRegistered(user) => false, tutti i suoi followers smetteranno di seguirlo e
-	 * tutti i suoi post verranno eliminati.
-	 * @throws NPE se user == null
-	 * @throws IllegalArgumentException se !this.isRegistered(user).
+	 * @effects this.isRegistered(user.getName()) diventa false, tutti i suoi followers
+	 * smetteranno di seguirlo e tutti i suoi post verranno eliminati.
+	 * @return true se l'utente è stato rimosso correttamente, false altrimenti
+	 * @throws NullPointerException se user == null
+	 * @throws UserException se !this.isRegistered(user)
+	 * @throws PermissionDeniedException se !user.hasSentRequest()
 	 */
-	public void removeUser(String user);
-	
-	/**
-	 * @requires
-	 * @return Un Set<String> che contiene gli identificativi di tutti gli utenti, vuoto se la
-	 * rete non ha utenti (garantisce che modifiche di questo set non influiscono sulla rete
-	 * sociale).
-	 */
-	public Set<String> loadAllUsers();
-	
-	/**
-	 * @requires
-	 * @effects Tutti gli utenti sono rimossi dalla rete (e i loro post eliminati).
-	 */
-	public void removeAllUsers();
+	public boolean removeUser(User user);
 	
 	//Following methods
 	
 	/**
-	 * @requires following != null && followed != null
+	 * @requires post != null &amp; username != null &amp; post.getAuthor()
+	 * &amp; this.isRegistrated(post.getAuthor().getUsername()) &amp;
+	 * this.isRegistrated(username)
+	 * username sono registrati alla stessa rete di post
+	 * @param post Il post che potrebbe aver il like.
+	 * @param username Lo username dell'utente che potrebbe aver messo like.
+	 * @return true se username ha messo like a post, false altrimenti
+	 * @throws NullPointerException se post == null
+	 * @throws NullPointerException se username == null
+	 * @throws UserException se !this.isRegistrated(post.getAuthor().getUsername())
+	 * @throws UserException se !this.isRegistrated(this.isRegistrated(username))
+	 */
+	public boolean isLikedByUser(Post post, String username);
+	
+	/**
+	 * @requires user != null &amp; post != null &amp; this.containsPost(post)
+	 * &amp; this.isRegistered(user) &amp; this.isRegistered(post.getAuthor()) 
+	 * &amp; user.hasSentRequest() &amp; !user.equals(post.getAuthor()) &amp;
+	 *   //l'utente non ha già messo like allo stesso post
+	 * @param user L'utente che mette like
+	 * @param post Il Post a cui sarà messo like da user
+	 * @return true se il like è stato aggiunto correttamente, false altrimenti
+	 * @effects se ritorna true, user sarà follower di post.getAuthor()
+	 * @throws NullPointerException se user == null
+	 * @throws NullPointerException se post == null
+	 * @throws UserException se !this.isRegistered(user.getUsername())
+	 * @throws PostException se !this.containsPost(post)
+	 * @throws PermissionDeniedException se this.isLikedByUser(post, user.getUsername())
+	 * @throws PermissionDeniedException se !user.hasSentRequest()
+	 */
+	public boolean addLike(User user, Post post);
+	
+		/**
+	 * @requires user != null &amp; post != null &amp; this.containsPost(post)
+	 * &amp; this.isRegistered(user) &amp; this.isRegistered(post.getAuthor()) 
+	 * &amp; user.hasSentRequest()
+	 * @param user L'utente che rimuove il like
+	 * @param post Il Post a cui user rimuoverà il like
+	 * @return true se il like è stato rimosso correttamente, false altrimenti
+	 * @effects se ritorna true e in conseguenza di ciò post.getAuthor() non avrà
+	 * più alcun like di user, allora user smetterà di seguire post.getAuthor()
+	 * @throws NullPointerException se user == null
+	 * @throws NullPointerException se post == null
+	 * @throws UserException se !this.isRegistered(user.getUsername())
+	 * @throws PostException se !this.containsPost(post)
+	 * @throws PermissionDeniedException se !this.isLikedByUser(post, user.getUsername())
+	 * @throws PermissionDeniedException se !user.hasSentRequest()
+	 */
+	public boolean removeLike(User user, Post post);
+	
+	/**
+	 * @requires following != null &amp; followed != null
 	 * @param following
-	 * 				L'utente che potrebbe star seguendo followed.
+	 * 				L'utente che potrebbe stare seguendo followed.
 	 * @param followed
 	 * 				L'utente che potrebbe essere seguito da following.
 	 * @return true se following sta seguendo followed, false altrimenti
 	 * (ad esempio se following.equals(followed)).
-	 * @throws NPE se following == null
-	 * @throws NPE se followed == null
+	 * @throws NullPointerException se following == null
+	 * @throws NullPointerException se followed == null
 	 */
 	public boolean isFollowing(String following, String followed);
-	
-	/**
-	 * @requires follower != null && followed != null && (!follower.equals(followed))
-	 * @param follower
-	 * 				Il futuro follower.
-	 * @param followed
-	 * 				Il futuro followed.
-	 * @effects this.isFollowing(follower, followed) => true.
-	 * @throws NPE se follower == null
-	 * @throws NPE se followed == null
-	 * @throws IllegalArgumentException se follower.equals(followed)
-	 */
-	public void followUser(String follower, String followed);
-	
-	/**
-	 * @requires unfollower != null && unfollowed != null
-	 * @param unfollower
-	 * 					L'utente che smetterà di seguire.
-	 * @param unfollowed
-	 * 					L'utente che non sarà più seguito.
-	 * @effects this.isFollowing(follower, followed) => false.
-	 * @throws NPE se unfollower == null
-	 * @throws NPE se unfollowed == null
-	 */
-	public void unFollowUser(String unfollower, String unfollowed);
-	
-	/**
-	 * @requires user != null && this.isRegistered(user)
-	 * @param user
-	 * 			L'utente che deve smettere di seguire tutti.
-	 * @effects Forall String u : this.isRegistered(u), this.isFollowing(user, u) => false.
-	 * @throws NPE se user == null
-	 * @throws IllegalArgumentException se !this.isRegistered(user)
-	 */
-	public void unFollowAll(String user);
-	
-	/**
-	 * @requires user != null && this.isRegistered(user)
-	 * @param user
-	 * 			L'utente che tutti devono smettere di seguire.
-	 * @effects forall String u : this.isRegistered(u), this.isFollowing(u, user) => false.
-	 * @throws NPE se user == null
-	 * @throws IllegalArgumentException se !this.isRegistered(user)
-	 */
-	public void getUnFollowedByAll(String user);
+
 	
 	//Analysis methods
 
 	/**
-	 * @requires ps != null && forall Post p : ps, (p != null && this.isRegistered(p.getAuthor())
+	 * @requires ps != null &amp; forall Post p : ps, (p != null &amp; this.isRegistered(p.getAuthor())
 	 * @param ps
 	 * 		La lista di post da controllare.
-	 * @return Una Map<String, Set<String>> che rappresenta la sotto-rete sociale individuata dalla
-	 * lista ps.
-	 * @throws NPE se ps == null
-	 * @throws IllegalArgumentException se esiste Post p : ps | p == null
-	 * @throws IllegalArgumentException se esiste Post p : ps | !this.isRegistered(p.getAuthor())
+	 * @return Una Map che rappresenta la sotto-rete sociale individuata dalla lista ps,
+	 * i.e.: l'insieme degli autori dei post e per ogni 
+	 * coppia di utenti se uno è follower dell'altro.
+	 * @throws NullPointerException se ps == null
+	 * @throws NullPointerException se esiste Post p : ps | p == null
+	 * @throws PostException se esiste Post p : ps | !this.isRegistered(p.getAuthor())
 	 */
 	public Map<String, Set<String>> guessFollowers(List<Post> ps);
 	
 	/**
 	 * @requires 
-	 * @return Un Set<String> che contiene tutti gli utenti registrati menzionati (taggati)
+	 * @return Un Un Set di stringhe che contiene tutti gli utenti registrati menzionati (taggati)
 	 * nella rete.
 	 */
 	public Set<String> getMentionedUsers();
 	
 	/**
-	 * @requires ps != null && forall Post p : ps, (p != null && this.isRegistered(p.getAuthor())
+	 * @requires ps != null &amp; forall Post p : ps, (p != null &amp; this.isRegistered(p.getAuthor())
 	 * @param ps
 	 * 			La lista di post da controllare.
-	 * @return Un Set<String> che contiene tutti gli utenti registrati menzionati (taggati)
+	 * @return Un Set di stringhe che contiene tutti gli utenti registrati menzionati (taggati)
 	 * nella lista di post.
-	 * @throws NPE se ps == null
-	 * @throws IllegalArgumentException se esiste Post p : ps | p == null
-	 * @throws IllegalArgumentException se esiste Post p : ps | !this.isRegistered(p.getAuthor())
+	 * @throws NullPointerException se ps == null
+	 * @throws NullPointerException se esiste Post p : ps | p == null
+	 * @throws PostException se esiste Post p : ps | !this.isRegistered(p.getAuthor())
 	 */
 	public Set<String> getMentionedUsers(List<Post> ps);
+	
+	/**
+	 * @requires
+	 * @return
+	 * 		Una Lista di stringhe che contiene gli x (=quanti?) utenti più influenti della rete (cioè
+	 * 		che hanno il numero maggiore di followers), una List di stringhe vuota se la
+	 * 		rete non ha utenti registrati.
+	 */
+	public List<String> influencers();
 		
 	/**
-	 * @requires username != null && this.isRegistered(username)
+	 * @requires username != null &amp; this.isRegistered(username)
 	 * @param username
 	 * 				Lo username dell'utente.
-	 * @return Una List<Post> che contiene tutti i post scritti da username.
-	 * @throws NPE se username == null
-	 * @throws IllegalArgumentException se !this.isRegistered(username)
+	 * @return Una Lista di Post che contiene tutti i post scritti da username.
+	 * @throws NullPointerException se username == null
+	 * @throws UserException se !this.isRegistered(username)
 	 */
 	public List<Post> writtenBy(String username);
 	
 	/**
-	 * @requires ps != null && forall Post p : ps, (p != null && this.isRegistered(p.getAuthor())
+	 * @requires ps != null &amp; username != null &amp; 
+	 * this.isRegistered(username) &amp; 
+	 * forall Post p : ps, (p != null &amp; this.isRegistered(p.getAuthor())
 	 * @param ps
 	 * 			La lista di post da controllare.
 	 * @param username
 	 * 			Lo username dell'utente.
-	 * @return Una List<Post> che contiene tutti i post scritti da username in ps (una lista
+	 * @return Una Lista di Post che contiene tutti i post scritti da username in ps (una lista
 	 * vuota se non ce n'è nessuno!).
-	 * @return null se !this.isRegistered(username).
-	 * @throws NPE se ps == null
-	 * @throws IllegalArgumentException se esiste Post p : ps | p == null
-	 * @throws IllegalArgumentException se esiste Post p : ps | !this.isRegistered(p.getAuthor())
+	 * @throws NullPointerException se ps == null
+	 * @throws NullPointerException se username == null 
+	 * @throws UserException se !this.isRegistered(username).
+	 * @throws PostException se esiste Post p : ps | p == null
+	 * @throws PostException se esiste Post p : ps | !this.isRegistered(p.getAuthor())
 	 */
 	public List<Post> writtenBy(List<Post> ps, String username);
 	
 	/**
-	 * @requires words != null && forall String s : words, s != null
-	 * @param words
-	 * 			Una lista di stringhe che contiene le parole da cercare, senza valori null.
-	 * @return Una List<Post> che contiene tutti i post nella rete che contengono almeno una delle
+	 * @requires words != null &amp; forall String s : words, s != null
+	 * @param words Una lista di stringhe che contiene le parole da cercare, 
+	 * senza valori null.
+	 * @return Una Lista di Post che contiene tutti i post nella rete che contengono almeno una delle
 	 * parole specificate in words.
-	 * @throws NPE se words == null.
+	 * @throws NullPointerException se words == null.
 	 * @throws IllegalArgumentException se esiste String s : words | s == null
 	 */
 	public List<Post> containing(List<String> words);
