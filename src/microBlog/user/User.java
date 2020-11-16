@@ -51,15 +51,6 @@ public interface User {
 	 */
 	public boolean isRegistered();
 	
-	/**
-	 * @requires this.isRegistered()
-	 * @return true se l'utente è stato rimosso con successo dalla rete, false
-	 * altrimenti. Dopo essere stato rimosso dalla rete, l'utente è da considerarsi
-	 * "distrutto".
-	 * @throws UserException se !this.isRegistered()
-	 */
-	public boolean unregister();
-	
 	//TODO Controllare che i tag siano di utenti effettivamente presenti nella rete
 	/**
 	 * @requires text != null &amp; this.isRegistered() &amp; 
@@ -106,17 +97,4 @@ public interface User {
 	 * @throws UserException se username non è registrato alla stessa rete di this
 	 */
 	public boolean addLike(int id, String username);
-	
-	/**
-	 * @requires id &gt; 0 &amp; username != null &amp; this.isRegistered() &amp;
-	 * this.getAuthor() e username compaiono nella stessa rete.
-	 * @param id L'id del post da cui togliere il like
-	 * @param username Lo username dell'utente a cui va tolto il like.
-	 * @return true se il like è stato rimosso con successo, false altrimenti
-	 * @throws IllegalArgumentException se id &le; 0
-	 * @throws NullPointerException se username == null
-	 * @throws PermissionDeniedException se !this.isRegistered()
-	 * @throws UserException se username non è registrato alla stessa rete di this
-	 */
-	public boolean removeLike(int id, String username);
 }

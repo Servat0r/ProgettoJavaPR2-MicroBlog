@@ -66,15 +66,6 @@ public class UserImpl implements User {
 		return (this.net != null);
 	}
 
-	public boolean unregister() {
-		if (!this.isRegistered()) throw new UserException();
-		this.sentRequest = true;
-		boolean b = this.net.removeUser(this);
-		this.sentRequest = false;
-		this.net = null;
-		return b;
-	}
-
 	public boolean writeTextPost(String text) {
 		if (text == null) throw new NullPointerException();
 		if (!this.isRegistered()) throw new PermissionDeniedException();
@@ -126,18 +117,6 @@ public class UserImpl implements User {
 		TextPost tp = this.getPost(id, username);
 		this.sentRequest = true;
 		boolean b = this.net.addLike(this, tp);
-		this.sentRequest = false;
-		return b;
-	}
-
-	public boolean removeLike(int id, String username) {
-		if (id <= 0) throw new IllegalArgumentException();
-		if (username == null) throw new NullPointerException();
-		if (!this.isRegistered()) throw new PermissionDeniedException();
-		if (!this.net.isRegistered(username)) throw new UserException();	
-		TextPost tp = this.getPost(id, username);
-		this.sentRequest = true;
-		boolean b = this.net.removeLike(this, tp);
 		this.sentRequest = false;
 		return b;
 	}

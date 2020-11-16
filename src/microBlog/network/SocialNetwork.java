@@ -95,20 +95,6 @@ public interface SocialNetwork {
 	 */
 	public void registerUser(User user);
 	
-	/**
-	 * @requires user != null &amp; this.isRegistered(user.getName()) 
-	 * &amp; user.hasSentRequest()
-	 * @param user
-	 * 			L'utente da rimuovere.
-	 * @effects this.isRegistered(user.getName()) diventa false, tutti i suoi followers
-	 * smetteranno di seguirlo e tutti i suoi post verranno eliminati.
-	 * @return true se l'utente è stato rimosso correttamente, false altrimenti
-	 * @throws NullPointerException se user == null
-	 * @throws UserException se !this.isRegistered(user)
-	 * @throws PermissionDeniedException se !user.hasSentRequest()
-	 */
-	public boolean removeUser(User user);
-	
 	//Following methods
 	
 	/**
@@ -143,24 +129,6 @@ public interface SocialNetwork {
 	 * @throws PermissionDeniedException se !user.hasSentRequest()
 	 */
 	public boolean addLike(User user, Post post);
-	
-		/**
-	 * @requires user != null &amp; post != null &amp; this.containsPost(post)
-	 * &amp; this.isRegistered(user) &amp; this.isRegistered(post.getAuthor()) 
-	 * &amp; user.hasSentRequest()
-	 * @param user L'utente che rimuove il like
-	 * @param post Il Post a cui user rimuoverà il like
-	 * @return true se il like è stato rimosso correttamente, false altrimenti
-	 * @effects se ritorna true e in conseguenza di ciò post.getAuthor() non avrà
-	 * più alcun like di user, allora user smetterà di seguire post.getAuthor()
-	 * @throws NullPointerException se user == null
-	 * @throws NullPointerException se post == null
-	 * @throws UserException se !this.isRegistered(user.getUsername())
-	 * @throws PostException se !this.containsPost(post)
-	 * @throws PermissionDeniedException se !this.isLikedByUser(post, user.getUsername())
-	 * @throws PermissionDeniedException se !user.hasSentRequest()
-	 */
-	public boolean removeLike(User user, Post post);
 	
 	/**
 	 * @requires following != null &amp; followed != null

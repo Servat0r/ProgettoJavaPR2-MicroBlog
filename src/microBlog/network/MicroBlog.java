@@ -37,6 +37,7 @@ public class MicroBlog implements SocialNetwork {
 	 */
 	private Map<String, Set<String>> network;
 	
+	//TODO Da cambiare in lista ordinata (manualmente) in senso decrescente
 	/**
 	 * Un insieme ordinato di Pair che contengono il numero di followers per ogni
 	 * utente della rete, utilizzato principalmente per il metodo
@@ -51,6 +52,7 @@ public class MicroBlog implements SocialNetwork {
 	public MicroBlog() {
 		this.posts = new HashMap<String, Set<Post>>();
 		this.network = new HashMap<String, Set<String>>();
+		//Chiaramente cambiare anche qui
 		this.followersCount = new TreeSet<Pair<String>>();
 	}
 	
@@ -92,36 +94,12 @@ public class MicroBlog implements SocialNetwork {
 		if (b) {
 			for (Like l : tp.getLikes()) {
 				exLiker = l.getAuthor();
+				//Conta solo i likes dei post esistenti, quindi si è "aggiornato" da solo
 				if (getLikesCount(exLiker, exLiked) == 0) 
 					b = b && unFollowUser(exLiker.getUsername(), exLiked.getUsername());
 			}
 		}
 		return b;
-	}
-	
-	/**
-	 * @requires username != null &amp; this.isRegistered(username)
-	 * @param username
-	 * 			Lo username dell'utente di cui si vogliono rimuovere i post.
-	 * @effects Tutti i post di user vengono eliminati dalla rete.
-	 * @throws NullPointerException se user == null
-	 * @throws IllegalArgumentException se !this.isRegistered(user)
-	 */
-	private void removeAllPosts(String username) {
-		if (username == null) throw new NullPointerException();
-		if (!this.isRegistered(username)) throw new IllegalArgumentException();
-		Iterator<Post> ip = this.posts.get(username).iterator();
-		while (ip.hasNext()) {
-			TextPost tp = (TextPost)ip.next();
-			ip.remove();
-			User exLiker;
-			User exLiked = tp.getAuthor();
-			for (Like l : tp.getLikes()) {
-				exLiker = l.getAuthor();
-				if (getLikesCount(exLiker, exLiked) == 0) 
-					unFollowUser(exLiker.getUsername(), exLiked.getUsername());
-			}
-		}
 	}
 	
 	//User methods
@@ -142,34 +120,6 @@ public class MicroBlog implements SocialNetwork {
 		this.network.put(user.getUsername(), t);
 		System.out.println("Aggiunta a conta followers: " + //FIXME
 				this.followersCount.add(new Pair<String>(0, user.getUsername())));
-	}
-	
-	public boolean removeUser(User user) {
-		if (user == null) throw new NullPointerException();
-		String username = user.getUsername();
-		if (!this.isRegistered(username)) throw new UserException();
-		if (!user.hasSentRequest()) throw new PermissionDeniedException();
-		this.removeAllPosts(username); //Tutti i post rimossi
-		boolean b = true;
-		this.posts.remove(username); //Rimosso da chi può postare
-		for (String otherUser : this.posts.keySet()) {
-			for (Post p : this.posts.get(otherUser)) {
-				 for (Like l : ((TextPost)p).getLikes()) {
-					 if (l.getAuthor().equals(user)) 
-						 b = b && this.removeLike(user, p);
-				 }
-			}
-		}
-		this.unFollowAll(username); //Smette di seguire tutti
-		this.getUnFollowedByAll(username); //Tutti smettono di seguirlo
-		this.network.remove(username); //Rimosso da chi può seguire ed essere seguito
-		Iterator<Pair<String>> ips = this.followersCount.iterator();
-		Pair<String> p;
-		while (ips.hasNext()) {
-			p = ips.next();
-			if (p.getSecond().equals(user.getUsername())) ips.remove();
-		}
-		return b;
 	}
 	
 	//Following methods
@@ -255,34 +205,6 @@ public class MicroBlog implements SocialNetwork {
 		return b;
 	}
 	
-	/**
-	 * @requires user != null &amp; this.isRegistered(user)
-	 * @param user
-	 * 			L'utente che deve smettere di seguire tutti.
-	 * @effects Forall String u : this.isRegistered(u), this.isFollowing(user, u) diventa false.
-	 * @throws NullPointerException se user == null
-	 * @throws UserException se !this.isRegistered(user)
-	 */
-	private void unFollowAll(String user) {
-		if (user == null) throw new NullPointerException();
-		if (!this.isRegistered(user)) throw new UserException();		
-		for (String u : this.network.keySet()) this.unFollowUser(user, u);
-	}
-	
-	/**
-	 * @requires user != null &amp; this.isRegistered(user)
-	 * @param user
-	 * 			L'utente che tutti devono smettere di seguire.
-	 * @effects forall String u : this.isRegistered(u), this.isFollowing(u, user) diventa false.
-	 * @throws NullPointerException se user == null
-	 * @throws UserException se !this.isRegistered(user)
-	 */
-	private void getUnFollowedByAll(String user) {
-		if (user == null) throw new NullPointerException();
-		if (!this.isRegistered(user)) throw new UserException();
-		for (String u : this.network.keySet()) this.unFollowUser(u, user);
-	}
-	
 	//Analysis methods
 	
 	/**
@@ -301,20 +223,22 @@ public class MicroBlog implements SocialNetwork {
 		}
 	}
 	
-	//TODO Va fatta così?
+	//TODO Va fatta così (cioè per ogni like aggiungi un follower)?
 	public Map<String, Set<String>> guessFollowers(List<Post> ps) {
-		checkForExceptions(ps);
+		checkForExceptions(ps); /* Ci dice automaticamente che tutti i post di ps
+		sono in questa rete */
 		Map<String, Set<String>> map = new HashMap<String, Set<String>>();
 		String s;
 		for (Post p : ps) {
 			s = p.getAuthor().getUsername();
 			map.putIfAbsent(s, new HashSet<String>());
 			for (Like l : ((TextPost)p).getLikes()) 
-				map.get(s).add(l.getPost().getAuthor().getUsername());
+				map.get(l.getPost().getAuthor().getUsername()).add(s);
 		}
 		return map;
 	}
 	
+	//TODO Non va cambiato nel passaggio da Set a List
 	public List<String> influencers() {
 		List<String> infl = new ArrayList<>(this.network.keySet().size());
 		//Sono inseriti in ordine
@@ -332,6 +256,7 @@ public class MicroBlog implements SocialNetwork {
 		return s;
 	}
 
+	//TODO Qualcosa non va perché getMentionedUsers() non stampava correttamente i tag
 	public Set<String> getMentionedUsers(List<Post> ps) { //Safe
 		checkForExceptions(ps);
 		Set<String> s = new HashSet<String>();
@@ -341,6 +266,7 @@ public class MicroBlog implements SocialNetwork {
 		return s;
 	}
 	
+	//TODO Questo sembra che funzioni
 	public List<Post> writtenBy(String username) { //Safe
 		if (username == null) throw new NullPointerException();
 		if (!this.isRegistered(username)) throw new UserException();
@@ -463,32 +389,6 @@ public class MicroBlog implements SocialNetwork {
 		if (b && !isFollowing(liker, liked)) b = b && followUser(liker, liked);
 		return b;
 	}
-
-	public boolean removeLike(User user, Post post) {
-		if (user == null) throw new NullPointerException();
-		if (post == null) throw new NullPointerException();		
-		if (!this.containsPost(post)) throw new PostException();
-		if (!this.isRegistered(user.getUsername())) throw new UserException();
-		if (!this.isLikedByUser(post, user.getUsername()))
-			throw new PermissionDeniedException();
-		if (!user.hasSentRequest()) throw new PermissionDeniedException();
-		String unLiker = user.getUsername();
-		String unLiked = post.getAuthor().getUsername();
-		boolean b = this.posts.get(unLiked).remove(post);
-		Like l = null; //Da usare per rimuovere
-		for (Like lp : ((TextPost)post).getLikes()) {
-			if (lp.getAuthor() == user) l = lp;
-		}
-		// l != null per quanto sopra
-		TextPost tp = ((TextPost)post);
-		Set<Like> sl = new HashSet<Like>(tp.getLikes());
-		System.out.println("Rimozione like: " + sl.remove(l)); //FIXME Ma perché lo fa 2 volte?
-		tp = tp.copy(sl); //Viene creato un nuovo oggetto (!)
-		b = this.posts.get(unLiked).add(tp) && b; /*Se è false allora qualcosa 
-		non ha funzionato */
-		if (this.getLikesCount(user, post.getAuthor()) == 0) unFollowUser(unLiker, unLiked); 
-		return b;
-	}
 	
 	/**
 	 * @requires liker != null &amp; liked != null &amp; 
@@ -516,6 +416,7 @@ public class MicroBlog implements SocialNetwork {
 		return result;
 	}
 
+	//TODO Questo (se non si possono rimuovere i likes) sembra che funzioni
 	public boolean isLikedByUser(Post post, String username) {
 		if (post == null) throw new NullPointerException();
 		if (username == null) throw new NullPointerException();
