@@ -82,6 +82,14 @@ public class UserImpl implements User {
 		this.sentRequest = false;
 		return b;
 	}
+	
+	public boolean publicPost(Post post) {
+		if(post.getAuthor()!=this) throw new UserException(); 
+		this.sentRequest = true;
+		Boolean b = this.net.storePost(post);
+		this.sentRequest = false;
+		return b;
+	}
 
 	public boolean removePost(int id) {
 		if (id <= 0) throw new IllegalArgumentException("Id must be > 0 !");

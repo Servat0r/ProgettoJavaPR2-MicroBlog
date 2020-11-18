@@ -154,7 +154,7 @@ public interface SocialNetwork {
 	 * i.e.: l'insieme degli autori dei post e per ogni 
 	 * coppia di utenti se uno è follower dell'altro.
 	 * @throws NullPointerException se ps == null
-	 * @throws NullPointerException se esiste Post p : ps | p == null
+	 * @throws PostException se esiste Post p : ps | p == null
 	 * @throws PostException se esiste Post p : ps | !this.isRegistered(p.getAuthor())
 	 */
 	public Map<String, Set<String>> guessFollowers(List<Post> ps);
@@ -173,7 +173,7 @@ public interface SocialNetwork {
 	 * @return Un Set di stringhe che contiene tutti gli utenti registrati menzionati (taggati)
 	 * nella lista di post.
 	 * @throws NullPointerException se ps == null
-	 * @throws NullPointerException se esiste Post p : ps | p == null
+	 * @throws PostException se esiste Post p : ps | p == null
 	 * @throws PostException se esiste Post p : ps | !this.isRegistered(p.getAuthor())
 	 */
 	public Set<String> getMentionedUsers(List<Post> ps);

@@ -2,6 +2,7 @@ package microBlog.user;
 
 import java.util.Date;
 import microBlog.network.*;
+import microBlog.post.Post;
 import microBlog.post.PostException;
 
 /**
@@ -64,6 +65,19 @@ public interface User {
 	 * @throws PostException se è taggato un utente non presente nella rete
 	 */
 	public boolean writeTextPost(String text);
+	
+	
+	/**
+	 * @requires post != null &amp; this.isRegistered() &amp; 
+	 * Post.checkTextLength(text)
+	 * @param text Il testo del post
+	 * @return true se il post è stato aggiunto con successo alla rete di this, false
+	 * altrimenti
+	 * @throws NullPointerException se post == null
+	 * @throws User exception se post.getAuthor!=this
+	 * @throws PostException se post is already posted
+	 */
+	public boolean publicPost(Post post);
 	
 	/**
 	 * @requires id &gt; 0

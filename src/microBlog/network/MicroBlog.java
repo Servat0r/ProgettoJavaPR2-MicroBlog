@@ -43,7 +43,7 @@ public class MicroBlog implements SocialNetwork {
 	 * utente della rete, utilizzato principalmente per il metodo
 	 * {@link #influencers()}.
 	 */
-	private SortedSet<Pair<String>> followersCount;
+	private List<Pair<String>> followersCount;
 	
 	/**
 	 * Costruttore di default, inizializza posts e network a due mappe vuote e 
@@ -53,7 +53,7 @@ public class MicroBlog implements SocialNetwork {
 		this.posts = new HashMap<String, Set<Post>>();
 		this.network = new HashMap<String, Set<String>>();
 		//Chiaramente cambiare anche qui
-		this.followersCount = new TreeSet<Pair<String>>();
+		this.followersCount = new ArrayList<Pair<String>>();
 	}
 	
 	//Post methods
