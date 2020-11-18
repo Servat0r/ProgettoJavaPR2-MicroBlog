@@ -1,9 +1,9 @@
 package microBlog.user;
 
 import java.util.Date;
-import microBlog.network.*;
-import microBlog.post.Post;
-import microBlog.post.PostException;
+import java.util.List;
+
+import microBlog.post.*;
 
 /**
  * Modella un utente della rete sociale MicroBlog. Un utente è un oggetto che può:
@@ -47,68 +47,45 @@ public interface User {
 	public boolean hasSentRequest();
 	
 	/**
-	 * @requires
-	 * @return true se l'utente è registrato a una rete sociale, false altrimenti
-	 */
-	public boolean isRegistered();
-	
-	//TODO Controllare che i tag siano di utenti effettivamente presenti nella rete
-	/**
-	 * @requires text != null &amp; this.isRegistered() &amp; 
-	 * Post.checkTextLength(text)
+	 * @requires text != null &amp; Post.checkTextLength(text)
 	 * @param text Il testo del post
-	 * @return true se il post è stato aggiunto con successo alla rete, false
-	 * altrimenti
+	 * @return Crea un TextPost con testo text e restituisce un riferimento a questi.
 	 * @throws NullPointerException se text == null
-	 * @throws PermissionDeniedException se !this.isRegistered()
 	 * @throws PostException se !Post.checkTextLength(text)
 	 * @throws PostException se è taggato un utente non presente nella rete
 	 */
-	public boolean writeTextPost(String text);
-	
-	
-	/**
-	 * @requires post != null &amp; this.isRegistered() &amp; 
-	 * Post.checkTextLength(text)
-	 * @param text Il testo del post
-	 * @return true se il post è stato aggiunto con successo alla rete di this, false
-	 * altrimenti
-	 * @throws NullPointerException se post == null
-	 * @throws User exception se post.getAuthor!=this
-	 * @throws PostException se post is already posted
-	 */
-	public boolean publicPost(Post post);
+	public TextPost writeTextPost(String text);
 	
 	/**
-	 * @requires id &gt; 0
-	 * @param id L'id del post da eliminare
+	 * @requires tp != null &amp; this.equals(tp.getAuthor()) &amp; tp è contenuto
+	 * nella stessa rete di this
+	 * @param tp Il TextPost da eliminare.
 	 * @return true se il post è stato rimosso con successo, false altrimenti
-	 * @throws IllegalArgumentException se id &le; 0
+	 * @throws NullPointerException se tp == null
+	 * @throws PermissionDeniedException se !this.equals(tp.getAuthor())
+	 * @throws PostException se tp non è nella stessa rete di this
 	 */
-	public boolean removePost(int id);
+	public boolean removeTextPost(TextPost tp);
+	
+	//TODO In questo modo non si può mettere like a un proprio post
+	/**
+	 * @requires tp != null &amp; !this.equals(tp.getAuthor()) &amp; tp è nella stessa
+	 * rete di this
+	 * @param tp Il TextPost a cui mettere il like.
+	 * @return Il TextPost aggiornato col nuovo like.
+	 * @throws PostException se tp non è nella stessa rete di this
+	 * @throws NullPointerException se username == null
+	 * @throws PermissionDeniedException se this.equals(tp.getAuthor())
+	 */
+	public TextPost addLike(TextPost tp);
 	
 	/**
-	 * @requires username != null &amp; this.isRegistered() &amp; this.getAuthor()
-	 * e username compaiono nella stessa rete.
-	 * @param username Lo username dell'utente di cui si vogliono gli id dei post.
-	 * @return Un array di interi che contiene l'id di ogni TextPost che l'utente
-	 * ha pubblicato sulla sua rete sociale, se registrato a una.
+	 * @requires username != null &amp; this.getUsername() e username devono 
+	 * essere utenti della stessa rete.
+	 * @return Una lista dei TextPost scritti da username.
 	 * @throws NullPointerException se username == null
-	 * @throws PermissionDeniedException se !this.isRegistered()
-	 * @throws UserException se username non è registrato alla stessa rete di this
+	 * @throws UserException se this.getUsername() e username non sono utenti 
+	 * della stessa rete.
 	 */
-	public int[] getTextPostIds(String username);
-	
-	/**
-	 * @requires id &gt; 0 &amp; username != null &amp; this.isRegistered() &amp;
-	 * this.getAuthor() e username compaiono nella stessa rete.
-	 * @param id L'id del post a cui mettere il like
-	 * @param username Lo username dell'utente a cui si mette like
-	 * @return true se il like è stato aggiunto con successo, false altrimenti
-	 * @throws IllegalArgumentException se id &le; 0
-	 * @throws NullPointerException se username == null
-	 * @throws PermissionDeniedException se !this.isRegistered()
-	 * @throws UserException se username non è registrato alla stessa rete di this
-	 */
-	public boolean addLike(int id, String username);
+	public List<TextPost> getTextPost(String username); 
 }

@@ -6,6 +6,8 @@ import microBlog.user.User;
 
 /**
  * Modella un like che un utente può aggiungere al post di un altro utente.
+ * A differenza di un TextPost, un Like non viene pubblicato come post a sé stante,
+ * ma come like di un altro post, e non è possibile aggiungere like ad un Like.
  * 
  * @author Salvatore Correnti
  * 
@@ -96,8 +98,7 @@ public final class Like implements Post {
 		return receiver;
 	}
 
-	@Override
 	public String getText() {
-		throw new UnsupportedOperationException();
+		return "like : " + this.getPost().getId();
 	}
 }

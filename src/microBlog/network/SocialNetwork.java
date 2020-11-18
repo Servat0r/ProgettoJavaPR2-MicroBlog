@@ -28,7 +28,7 @@ public interface SocialNetwork {
 	
 	//Post methods
 	
-	/**
+	/** TODO Eventualmente modificarlo per contare anche i likes come post.
 	 * @requires post != null
 	 * @param post 
 	 * 			Il post da cercare.
@@ -119,7 +119,7 @@ public interface SocialNetwork {
 	 *   //l'utente non ha già messo like allo stesso post
 	 * @param user L'utente che mette like
 	 * @param post Il Post a cui sarà messo like da user
-	 * @return true se il like è stato aggiunto correttamente, false altrimenti
+	 * @return Il TextPost aggiornato col nuovo like.
 	 * @effects se ritorna true, user sarà follower di post.getAuthor()
 	 * @throws NullPointerException se user == null
 	 * @throws NullPointerException se post == null
@@ -128,7 +128,16 @@ public interface SocialNetwork {
 	 * @throws PermissionDeniedException se this.isLikedByUser(post, user.getUsername())
 	 * @throws PermissionDeniedException se !user.hasSentRequest()
 	 */
-	public boolean addLike(User user, Post post);
+	public TextPost addLike(User user, TextPost post);
+	
+	/**
+	 * @requires username != null &amp; this.isRegistered(username)
+	 * @param username Lo username dell'utente.
+	 * @return Il numero totale di followers dell'utente username.
+	 * @throws NullPointerException se username == null
+	 * @throws UserException se !this.isRegistered(username)
+	 */
+	public int getTotalFollowersCount(String username);
 	
 	/**
 	 * @requires following != null &amp; followed != null
@@ -155,6 +164,7 @@ public interface SocialNetwork {
 	 * coppia di utenti se uno è follower dell'altro.
 	 * @throws NullPointerException se ps == null
 	 * @throws PostException se esiste Post p : ps | p == null
+	 * @throws PostException se !this.containsPost(p)
 	 * @throws PostException se esiste Post p : ps | !this.isRegistered(p.getAuthor())
 	 */
 	public Map<String, Set<String>> guessFollowers(List<Post> ps);
@@ -173,6 +183,7 @@ public interface SocialNetwork {
 	 * @return Un Set di stringhe che contiene tutti gli utenti registrati menzionati (taggati)
 	 * nella lista di post.
 	 * @throws NullPointerException se ps == null
+	 * @throws PostException se !this.containsPost(p)
 	 * @throws PostException se esiste Post p : ps | p == null
 	 * @throws PostException se esiste Post p : ps | !this.isRegistered(p.getAuthor())
 	 */
@@ -210,6 +221,7 @@ public interface SocialNetwork {
 	 * @throws NullPointerException se ps == null
 	 * @throws NullPointerException se username == null 
 	 * @throws UserException se !this.isRegistered(username).
+	 * @throws PostException se !this.containsPost(p)
 	 * @throws PostException se esiste Post p : ps | p == null
 	 * @throws PostException se esiste Post p : ps | !this.isRegistered(p.getAuthor())
 	 */

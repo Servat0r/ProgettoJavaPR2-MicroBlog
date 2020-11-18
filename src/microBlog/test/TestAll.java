@@ -47,7 +47,7 @@ public final class TestAll {
 		user_prova2.writeTextPost("messaggio con like");
 		user_blog2.writeTextPost("messaggio user blog 2");
 		
-		user_prova2.addLike(user_prova.getTextPostIds("user_prova")[0],"user_prova");
+		user_prova2.addLike(user_prova.getTextPost("user_prova")[0]);
 		
 		
 		List<Post> mappa_prova= new ArrayList<Post>();
@@ -178,7 +178,7 @@ public final class TestAll {
 
 		//rimozione di un post con id<0
 		try{
-			System.out.println(user_prova.removePost(-1));
+			System.out.println(user_prova.removeTextPost(-1));
 		}
 		catch(IllegalArgumentException e){
 			System.out.println(e);
@@ -186,7 +186,7 @@ public final class TestAll {
 
 		//aggiunta di un like ad un post con id<0
 		try{
-			System.out.println(user_prova.addLike(-1, "user_prova_2"));
+			System.out.println(user_prova.addLike(-1));
 		}
 		catch(IllegalArgumentException e){
 			System.out.println(e);
@@ -203,7 +203,7 @@ public final class TestAll {
 
 		//aggiunta di un like ad un post con username null
 		try{
-			System.out.println(user_prova.addLike(user_prova.getTextPostIds("user_prova_2")[0], null));
+			System.out.println(user_prova.addLike(user_prova.getTextPost("user_prova_2")[0]));
 		}
 		catch(IllegalArgumentException e){
 			System.out.println(e);
@@ -221,7 +221,7 @@ public final class TestAll {
 	
 		//aggiunta di un like ad un post con username non registrato nella stessa rete 
 		try{
-			System.out.println(user_prova.addLike(user_prova.getTextPostIds("user_blog_2")[0], "user_prova_2"));
+			System.out.println(user_prova.addLike(user_prova.getTextPost("user_blog_2")[0]));
 		}
 		catch(IllegalArgumentException e){
 			System.out.println(e);
@@ -987,7 +987,7 @@ public final class TestAll {
 		
 		//prende un post con id di uno user null dalla rete sociale 
 		try {
-			((MicroBlog) blog1).getPost(user_prova.getTextPostIds("user_prova")[0],null);
+			((MicroBlog) blog1).getPost(user_prova.getTextPost("user_prova")[0],null);
 		}
 		catch(NullPointerException e) {
 			System.out.println(e);
@@ -1005,7 +1005,7 @@ public final class TestAll {
 		
 		//prende un post con id di uno user non presente nella rete sociale 
 		try {
-			((MicroBlog) blog1).getPost(user_prova.getTextPostIds("user_prova")[0],"user_blog_2");
+			((MicroBlog) blog1).getPost(user_prova.getTextPost("user_prova")[0],"user_blog_2");
 		}
 		catch(NullPointerException e) {
 			System.out.println(e);
@@ -1024,7 +1024,7 @@ public final class TestAll {
 		
 		//prende un post con id non appartenente allo user nella rete sociale 
 		try {
-			((MicroBlog) blog1).getPost(user_prova.getTextPostIds("user_prova_2")[0],"user_prova");
+			((MicroBlog) blog1).getPost(user_prova.getTextPost("user_prova_2")[0],"user_prova");
 		}
 		catch(NullPointerException e) {
 			System.out.println(e);

@@ -71,7 +71,7 @@ final class Pair<T> implements Comparable<T> {
 	public int compareTo(Object o) {
 		try {
 			Pair<T> op = (Pair<T>)o;
-			return op.getFirst() - this.getFirst(); //In ordine decrescente
+			return this.getFirst() - op.getFirst(); //In ordine decrescente
 		} catch (ClassCastException e) {
 			throw new IllegalArgumentException("Must pass a Pair!");
 		}
@@ -79,5 +79,9 @@ final class Pair<T> implements Comparable<T> {
 
 	public String toString() {
 		return "Pair [first=" + first + ", second=" + second + "]";
+	}
+	
+	protected Pair<T> copy() {
+		return new Pair<T>(this.getFirst(), this.getSecond());
 	}
 }

@@ -39,20 +39,19 @@ public class MicroBlog implements SocialNetwork {
 	
 	//TODO Da cambiare in lista ordinata (manualmente) in senso decrescente
 	/**
-	 * Un insieme ordinato di Pair che contengono il numero di followers per ogni
-	 * utente della rete, utilizzato principalmente per il metodo
+	 * Una lista ordinata di Pair che contengono il numero di followers per ogni
+	 * utente della rete, utilizzato principalmente per il metodo 
 	 * {@link #influencers()}.
 	 */
 	private List<Pair<String>> followersCount;
 	
 	/**
 	 * Costruttore di default, inizializza posts e network a due mappe vuote e 
-	 * followersCount a un SOrtedSet vuoto.
+	 * followersCount a una lista vuota.
 	 */
 	public MicroBlog() {
 		this.posts = new HashMap<String, Set<Post>>();
 		this.network = new HashMap<String, Set<String>>();
-		//Chiaramente cambiare anche qui
 		this.followersCount = new ArrayList<Pair<String>>();
 	}
 	
@@ -118,11 +117,25 @@ public class MicroBlog implements SocialNetwork {
 		Set<String> t = new HashSet<String>();
 		this.posts.put(user.getUsername(), sp);
 		this.network.put(user.getUsername(), t);
-		System.out.println("Aggiunta a conta followers: " + //FIXME
-				this.followersCount.add(new Pair<String>(0, user.getUsername())));
+		this.followersCount.add(new Pair<String>(0, user.getUsername()));
 	}
 	
 	//Following methods
+	
+	/**
+	 * Si assume che l'ultimo elemento della lista sia appena stato aggiunto
+	 */
+	private void reorder() {
+		Pair<String> ps;
+		if (this.followersCount.size() <= 1) return;
+		int i = this.followersCount.size() - 1; //Ultimo indice
+		while (i >= 1 && this.followersCount.get(i).compareTo(this.followersCount.get(i-1)) > 0) {
+			ps = this.followersCount.get(i).copy();
+			this.followersCount.set(i, this.followersCount.get(i-1));
+			this.followersCount.set(i-1, ps);
+			i--;
+		}
+	}
 
 	public boolean isFollowing(String following, String followed) {
 		if (following == null) throw new NullPointerException();
@@ -152,7 +165,6 @@ public class MicroBlog implements SocialNetwork {
 			Pair<String> p = null;
 			while (ips.hasNext()) {
 				p = ips.next();
-				System.out.println("Prossimo utente" + p.toString()); //FIXME
 				if (p.getSecond().equals(followed)) {
 					ips.remove();
 					break;
@@ -161,6 +173,7 @@ public class MicroBlog implements SocialNetwork {
 			if (p != null) {
 				p.setFirst(p.getFirst() + 1);
 				this.followersCount.add(p);
+				this.reorder();
 			}
 		}
 		return b;
@@ -200,6 +213,7 @@ public class MicroBlog implements SocialNetwork {
 			if (p != null) {
 				p.setFirst(p.getFirst() - 1);
 				this.followersCount.add(p);
+				this.reorder();
 			}
 		}
 		return b;
@@ -213,12 +227,14 @@ public class MicroBlog implements SocialNetwork {
 	 * 			La lista da controllare.
 	 * @throws NullPointerException se ps == null
 	 * @throws PostException se esiste Post p : ps | p == null
+	 * @throws PostException se !this.containsPost(p)
 	 * @throws PostException se esiste Post p : ps | !this.isRegistered(p.getAuthor())
 	 */
 	private void  checkForExceptions(List<Post> ps) {
 		if (ps == null) throw new NullPointerException();
 		for (Post p : ps) {
 			if (p == null) throw new PostException();
+			if (!this.containsPost(p)) throw new PostException();
 			if (!this.isRegistered(p.getAuthor().getUsername())) throw new PostException();
 		}
 	}
@@ -367,7 +383,7 @@ public class MicroBlog implements SocialNetwork {
 		throw new PostException("Questo id non è associato con nessun post della rete!");
 	}
 
-	public boolean addLike(User user, Post post) {
+	public TextPost addLike(User user, TextPost post) {
 		if (user == null) throw new NullPointerException();
 		if (post == null) throw new NullPointerException();
 		if (!this.containsPost(post)) throw new PostException(); /* Se la rete corrente
@@ -378,16 +394,15 @@ public class MicroBlog implements SocialNetwork {
 		if (!user.hasSentRequest()) throw new PermissionDeniedException();
 		String liker = user.getUsername();
 		String liked = post.getAuthor().getUsername();
-		boolean b = this.posts.get(liked).remove(post);
+		this.posts.get(liked).remove(post);
 		Like l = new Like(user, post);
-		TextPost tp = ((TextPost)post);
-		Set<Like> sl = new HashSet<Like>(tp.getLikes());
+		Set<Like> sl = new HashSet<Like>(post.getLikes());
 		sl.add(l);
-		tp = tp.copy(sl); //Viene creato un nuovo oggetto (!)
-		b = b && this.posts.get(liked).add(tp); /*Se è false allora qualcosa 
+		post = post.copy(sl); //Viene creato un nuovo oggetto (!)
+		this.posts.get(liked).add(post); /*Se è false allora qualcosa 
 		non ha funzionato */
-		if (b && !isFollowing(liker, liked)) b = b && followUser(liker, liked);
-		return b;
+		if (!isFollowing(liker, liked)) followUser(liker, liked);
+		return post; //TODO Aggiustare
 	}
 	
 	/**
@@ -411,9 +426,18 @@ public class MicroBlog implements SocialNetwork {
 		int result = 0;
 		for (Post p : this.posts.get(likedName)) {
 			TextPost tp = (TextPost)p;
-			if (tp.getLikes().contains(new Like(liker, p))) result++;
+			for (Like l : tp.getLikes()) {
+				if (l.getAuthor().equals(liker)) result++;
+			} 
 		}
 		return result;
+	}
+	
+	public int getTotalFollowersCount(String username) {
+		if (username == null) throw new NullPointerException();
+		for (Pair<String> p : this.followersCount)
+			if (p.getSecond().equals(username)) return p.getFirst();
+		throw new UserException(); //L'utente non è registrato
 	}
 
 	//TODO Questo (se non si possono rimuovere i likes) sembra che funzioni

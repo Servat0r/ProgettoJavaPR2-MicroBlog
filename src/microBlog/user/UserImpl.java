@@ -1,5 +1,6 @@
 package microBlog.user;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
@@ -45,7 +46,7 @@ public class UserImpl implements User {
 		this.username = username;
 		this.net = net;
 		this.sentRequest = true;
-		net.registerUser(this);
+		this.net.registerUser(this);
 		this.sentRequest = false;
 		this.registrationDate = new Date();
 	}
@@ -62,13 +63,8 @@ public class UserImpl implements User {
 		return this.sentRequest;
 	}
 
-	public boolean isRegistered() {
-		return (this.net != null);
-	}
-
-	public boolean writeTextPost(String text) {
+	public TextPost writeTextPost(String text) {
 		if (text == null) throw new NullPointerException();
-		if (!this.isRegistered()) throw new PermissionDeniedException();
 		if (!Post.checkTextLength(text)) throw new PostException("Il tuo messaggio"
 				+ " è troppo lungo");
 		Set<Tag> st = Tag.getTagsFromText(text);
@@ -76,66 +72,46 @@ public class UserImpl implements User {
 			if (!this.net.isRegistered(t.getTagText())) 
 				throw new PostException("Hai taggato un utente inesistente!");
 		}
+		// tp != null sempre ed è immutable, quindi lo si può ritornare con sicurezza 
 		TextPost tp = new TextPost(this, text);
 		this.sentRequest = true;
-		Boolean b = this.net.storePost(tp);
+		this.net.storePost(tp);
 		this.sentRequest = false;
-		return b;
-	}
-	
-	public boolean publicPost(Post post) {
-		if(post.getAuthor()!=this) throw new UserException(); 
-		this.sentRequest = true;
-		Boolean b = this.net.storePost(post);
-		this.sentRequest = false;
-		return b;
+		return tp;
 	}
 
-	public boolean removePost(int id) {
-		if (id <= 0) throw new IllegalArgumentException("Id must be > 0 !");
+	public boolean removeTextPost(TextPost tp) {
+		if (tp == null) throw new NullPointerException();
+		if (!this.equals(tp.getAuthor())) throw new PermissionDeniedException();
+		if (!this.net.containsPost(tp)) throw new PostException();
 		this.sentRequest = true;
-		TextPost tp = this.getPost(id, username);
 		boolean b = this.net.removePost(tp);
 		this.sentRequest = false;
 		return b;
 	}
-
-	/**
-	 * @requires id &gt; 0
-	 * @param id L'identificativo del post.
-	 * @param username Lo username dell'utente di cui si vuole il post.
-	 * @return Il TextPost con quell'identificativo.
-	 * @throws IllegalArgumentException se id &le; 0
-	 * @throws PostException se non esiste un post con quell'identificativo
-	 */
-	private TextPost getPost(int id, String username) {
-		if (id <= 0) throw new IllegalArgumentException();
-		List<Post> ltp = this.net.writtenBy(username);
-		for (Post tp : ltp) {
-			if (tp.getId() == id) return (TextPost)tp;
-		}
-		throw new PostException("Questo id non è associato con nessun tuo post!");
-	}
-
-	public boolean addLike(int id, String username) {
-		if (id <= 0) throw new IllegalArgumentException();
-		if (username == null) throw new NullPointerException();
-		if (!this.isRegistered()) throw new PermissionDeniedException();
-		if (!this.net.isRegistered(username)) throw new UserException();	
-		TextPost tp = this.getPost(id, username);
+	
+	public TextPost addLike(TextPost tp) {
+		if (tp == null) throw new NullPointerException();
+		if (this.equals(tp.getAuthor())) throw new PermissionDeniedException();
+		if (!this.net.containsPost(tp)) throw new PostException();	
 		this.sentRequest = true;
-		boolean b = this.net.addLike(this, tp);
+		tp = this.net.addLike(this, tp);
 		this.sentRequest = false;
-		return b;
+		return tp;
 	}
 
-	public int[] getTextPostIds(String username) {
+	public List<TextPost> getTextPost(String username) {
 		if (username == null) throw new NullPointerException();
-		if (!this.isRegistered()) throw new PermissionDeniedException();
 		if (!this.net.isRegistered(username)) throw new UserException();
-		List<Post> ltp = this.net.writtenBy(username);
-		int[] ids = new int[ltp.size()];
-		for (int i = 0; i < ltp.size(); i++) ids[i] = ltp.get(i).getId();
-		return ids;
+		List<TextPost> ltp = new ArrayList<TextPost>();
+		for (Post p: this.net.writtenBy(username)) {
+			try {
+			TextPost tp = (TextPost)p;
+			ltp.add(tp);
+			} catch (ClassCastException e) {
+				continue;
+			}
+		}
+		return ltp;
 	}
 }

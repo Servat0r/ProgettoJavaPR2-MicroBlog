@@ -66,7 +66,6 @@ public final class TextPost implements Post {
 			String text) {
 		if (author == null) throw new NullPointerException();
 		if (text == null) throw new NullPointerException();
-		if (!author.isRegistered()) throw new UserException();
 		if (!Post.checkTextLength(text)) throw new PostException(); 
 	}
 	
@@ -166,6 +165,8 @@ public final class TextPost implements Post {
 		for (Tag t : this.getTags()) {
 			w = w + t.getTagText() + "\n";
 		}
+		if (this.getTags().size() == 0) w = w + "\n";
+		w = w + "Piace a: " + this.getLikes().size() + " persone";
 		return w;
 	}
 }
