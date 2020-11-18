@@ -68,6 +68,18 @@ public interface SocialNetwork {
 	 */
 	public boolean removePost(Post post);
 	
+	/**
+	 * @requires id &gt; 0 &amp; username != null &amp; this.isRegistered(username)
+	 * @param id L'id del post.
+	 * @param username Lo username dell'autore del post.
+	 * @return Il TextPost scritto da username, se esiste
+	 * @throws IllegalArgumentException se id &le; 0
+	 * @throws NullPointerException se username == null
+	 * @throws UserException se this.isRegistered(username)
+	 * @throws PostException se non esiste un post di username con questo id.
+	 */
+	public Post getPost(int id, String username);
+	
 	//User methods
 	
 	/**
@@ -128,7 +140,7 @@ public interface SocialNetwork {
 	 * @throws PermissionDeniedException se this.isLikedByUser(post, user.getUsername())
 	 * @throws PermissionDeniedException se !user.hasSentRequest()
 	 */
-	public TextPost addLike(User user, TextPost post);
+	public Post addLike(User user, Post post);
 	
 	/**
 	 * @requires username != null &amp; this.isRegistered(username)

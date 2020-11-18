@@ -364,26 +364,16 @@ public class MicroBlog implements SocialNetwork {
 		return l;
 	}
 	
-	/**
-	 * @requires id &gt; 0 &amp; username != null &amp; this.isRegistered(username)
-	 * @param id L'id del post.
-	 * @param username Lo username dell'autore del post.
-	 * @return Il TextPost scritto da username, se esiste
-	 * @throws IllegalArgumentException se id &le; 0
-	 * @throws NullPointerException se username == null
-	 * @throws UserException se this.isRegistered(username)
-	 * @throws PostException se non esiste un post di username con questo id.
-	 */
-	public TextPost getPost(int id, String username) {
+	public Post getPost(int id, String username) {
 		if (id <= 0) throw new IllegalArgumentException();
-		List<Post> ltp = this.writtenBy(username);
-		for (Post tp : ltp) {
-			if (tp.getId() == id) return (TextPost)tp;
+		List<Post> lp = this.writtenBy(username);
+		for (Post p : lp) {
+			if (p.getId() == id) return p;
 		}
 		throw new PostException("Questo id non è associato con nessun post della rete!");
 	}
 
-	public TextPost addLike(User user, TextPost post) {
+	public Post addLike(User user, Post post) {
 		if (user == null) throw new NullPointerException();
 		if (post == null) throw new NullPointerException();
 		if (!this.containsPost(post)) throw new PostException(); /* Se la rete corrente

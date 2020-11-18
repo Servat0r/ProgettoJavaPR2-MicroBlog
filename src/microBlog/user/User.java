@@ -54,18 +54,18 @@ public interface User {
 	 * @throws PostException se !Post.checkTextLength(text)
 	 * @throws PostException se è taggato un utente non presente nella rete
 	 */
-	public TextPost writeTextPost(String text);
+	public Post writePost(String text);
 	
 	/**
 	 * @requires tp != null &amp; this.equals(tp.getAuthor()) &amp; tp è contenuto
 	 * nella stessa rete di this
-	 * @param tp Il TextPost da eliminare.
+	 * @param p Il TextPost da eliminare.
 	 * @return true se il post è stato rimosso con successo, false altrimenti
 	 * @throws NullPointerException se tp == null
 	 * @throws PermissionDeniedException se !this.equals(tp.getAuthor())
 	 * @throws PostException se tp non è nella stessa rete di this
 	 */
-	public boolean removeTextPost(TextPost tp);
+	public boolean removePost(Post p);
 	
 	//TODO In questo modo non si può mettere like a un proprio post
 	/**
@@ -77,7 +77,7 @@ public interface User {
 	 * @throws NullPointerException se username == null
 	 * @throws PermissionDeniedException se this.equals(tp.getAuthor())
 	 */
-	public TextPost addLike(TextPost tp);
+	public Post addLike(Post tp);
 	
 	/**
 	 * @requires username != null &amp; this.getUsername() e username devono 
@@ -87,5 +87,5 @@ public interface User {
 	 * @throws UserException se this.getUsername() e username non sono utenti 
 	 * della stessa rete.
 	 */
-	public List<TextPost> getTextPost(String username); 
+	public List<Post> getPost(String username); 
 }

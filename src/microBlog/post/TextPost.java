@@ -127,31 +127,16 @@ public final class TextPost implements Post {
 		return (Date)this.timestamp.clone();
 	}
 	
-	/**
-	 * @requires
-	 * @return I tag del post.
-	 */
 	public Set<Tag> getTags() {
 		return this.tags;
 	}
 	
-	/**
-	 * @return I likes di questo post.
-	 */
 	public Set<Like> getLikes() {
 		Set<Like> sl = new HashSet<>(this.likes);
 		return sl;
 	}
-
-	/**
-	 * @requires newLikes != null &amp; forall Like l : newLikes, l.getPost() == this (!)
-	 * @param newLikes Un Set di Like che saranno i like del nuovo post, se set vuoto
-	 * si ottiene una copia effettiva del Post.
-	 * @return Una safe-copy del Post corrente.
-	 * @throws NullPointerException se newLikes == null
-	 * @throws IllegalArgumentException se esiste Like l : newLikes t.c. l.getPost() != this
-	 */
-	public TextPost copy(Set<Like> newLikes) {
+	
+	public Post copy(Set<Like> newLikes) {
 		newLikes.addAll(this.likes);
 		return new TextPost(this, newLikes);
 	}
@@ -166,7 +151,8 @@ public final class TextPost implements Post {
 			w = w + t.getTagText() + "\n";
 		}
 		if (this.getTags().size() == 0) w = w + "\n";
-		w = w + "Piace a: " + this.getLikes().size() + " persone";
+		int r = this.getLikes().size();
+		w = w + "Piace a: " + r + (r == 1 ? " persona" : " persone" );
 		return w;
 	}
 }

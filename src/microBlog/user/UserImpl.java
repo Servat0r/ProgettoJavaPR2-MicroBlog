@@ -63,7 +63,7 @@ public class UserImpl implements User {
 		return this.sentRequest;
 	}
 
-	public TextPost writeTextPost(String text) {
+	public Post writePost(String text) {
 		if (text == null) throw new NullPointerException();
 		if (!Post.checkTextLength(text)) throw new PostException("Il tuo messaggio"
 				+ " è troppo lungo");
@@ -80,17 +80,17 @@ public class UserImpl implements User {
 		return tp;
 	}
 
-	public boolean removeTextPost(TextPost tp) {
-		if (tp == null) throw new NullPointerException();
-		if (!this.equals(tp.getAuthor())) throw new PermissionDeniedException();
-		if (!this.net.containsPost(tp)) throw new PostException();
+	public boolean removePost(Post p) {
+		if (p == null) throw new NullPointerException();
+		if (!this.equals(p.getAuthor())) throw new PermissionDeniedException();
+		if (!this.net.containsPost(p)) throw new PostException();
 		this.sentRequest = true;
-		boolean b = this.net.removePost(tp);
+		boolean b = this.net.removePost(p);
 		this.sentRequest = false;
 		return b;
 	}
 	
-	public TextPost addLike(TextPost tp) {
+	public Post addLike(Post tp) {
 		if (tp == null) throw new NullPointerException();
 		if (this.equals(tp.getAuthor())) throw new PermissionDeniedException();
 		if (!this.net.containsPost(tp)) throw new PostException();	
@@ -100,18 +100,12 @@ public class UserImpl implements User {
 		return tp;
 	}
 
-	public List<TextPost> getTextPost(String username) {
+	//FIXME Riconvertire in TextPost se necessario
+	public List<Post> getPost(String username) {
 		if (username == null) throw new NullPointerException();
 		if (!this.net.isRegistered(username)) throw new UserException();
-		List<TextPost> ltp = new ArrayList<TextPost>();
-		for (Post p: this.net.writtenBy(username)) {
-			try {
-			TextPost tp = (TextPost)p;
-			ltp.add(tp);
-			} catch (ClassCastException e) {
-				continue;
-			}
-		}
+		List<Post> ltp = new ArrayList<Post>();
+		for (Post p: this.net.writtenBy(username)) ltp.add(p);
 		return ltp;
 	}
 }

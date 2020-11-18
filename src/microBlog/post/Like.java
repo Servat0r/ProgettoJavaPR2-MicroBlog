@@ -12,7 +12,7 @@ import microBlog.user.User;
  * @author Salvatore Correnti
  * 
  */
-public final class Like implements Post {
+public final class Like implements Publishable {
 
 	//Massimo id usato finora
 	private static int currentMaxId = 1;
@@ -54,7 +54,7 @@ public final class Like implements Post {
 		if (getClass() != obj.getClass())
 			return false;
 		Like other = (Like) obj;
-		if (id != other.id)
+		if (this.id != other.id)
 			return false;
 		return true;
 	}
@@ -96,9 +96,5 @@ public final class Like implements Post {
 	 */
 	public User getReceiver() {
 		return receiver;
-	}
-
-	public String getText() {
-		return "like : " + this.getPost().getId();
 	}
 }

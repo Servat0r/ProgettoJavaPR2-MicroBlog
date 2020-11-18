@@ -20,7 +20,35 @@ import microBlog.user.User;
  *
  */
 
-public interface Post {
+public interface Post extends Publishable {
+	
+	/**
+	 * @requires
+	 * @return Il testo del post.
+	 */
+	public String getText();
+	
+	/**
+	 * @requires
+	 * @return I likes di questo post.
+	 */
+	public Set<Like> getLikes();
+	
+	/**
+	 * @requires
+	 * @return I tag del post.
+	 */
+	public Set<Tag> getTags();
+	
+	/**
+	 * @requires newLikes != null &amp; forall Like l : newLikes, l.getPost() == this (!)
+	 * @param newLikes Un Set di Like che saranno i like del nuovo post, se set vuoto
+	 * si ottiene una copia effettiva del Post.
+	 * @return Una safe-copy del Post corrente.
+	 * @throws NullPointerException se newLikes == null
+	 * @throws IllegalArgumentException se esiste Like l : newLikes t.c. l.getPost() != this
+	 */
+	public Post copy(Set<Like> newLikes);
 
 	/**
 	 * @requires text != null
@@ -50,28 +78,4 @@ public interface Post {
 		String t = Post.removeTagSignatures(text);
 		return (t.length() <= 140);
 	}
-	
-	/**
-	 * @requires 
-	 * @return L'id del post.
-	 */
-	public int getId();
-	
-	/**
-	 * @requires
-	 * @return L'autore del post.
-	 */
-	public User getAuthor();
-	
-	/**
-	 * @requires
-	 * @return Il testo del post.
-	 */
-	public String getText();
-	
-	/**
-	 * @requires
-	 * @return La data e l'ora di pubblicazione del post.
-	 */
-	public Date getTimeStamp();
 }
