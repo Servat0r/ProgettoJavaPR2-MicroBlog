@@ -6,9 +6,12 @@ import java.util.Set;
 import microBlog.post.*;
 import microBlog.user.User;
 import microBlog.user.UserException;
+/**
+ * Tipo di dato astratto rappresentante una rete sociale.
+ */
 
 /**
- * Modella una rete sociale in cui sono presenti diversi utenti che possono seguire altri utenti e
+ * @overview Modella una rete sociale in cui sono presenti diversi utenti che possono seguire altri utenti e
  * pubblicare o eliminare post. L'interfaccia fornisce inoltre altre funzionalità di filtraggio e/o
  * analisi dati, ad esempio:
  * - aggiunta e/o rimozione di utenti;
@@ -20,7 +23,9 @@ import microBlog.user.UserException;
  * specifica lista;
  * - metodi di salvataggio /caricamento dei dati degli utenti (post) per effettuare tali analisi,
  * tutti assolutamente reference-safe, i.e. non violano la barriera di astrazione dei dati interni.
- * 
+ * @TypicalElement &lt; {Utente_0,{Post0_utente0,..., PostN_utente0)},...{Utente_M,{Post0_utenteM,..., PostN_utenteM)}}},
+ * 				    {Utente_0,{Utenteseguito0_utente0,..., UtenteseguitoN_utente0)},..., {Utente_M,{Utenteseguito0_utenteM,..., UtenteseguitoN_utenteM)}} 
+ * 					{(Utente_0,N_followers),..., (Utente_M,N_followers)	&gt; 
  * @author Salvatore Correnti
  */
 
@@ -43,6 +48,7 @@ public interface SocialNetwork {
 	 * post.getAuthor().hasSentRequest()
 	 * @param post
 	 * 			Il post da aggiungere.
+	 * @modifies Aggiunge Post al set dei post pubblicati da post.getAuthor()
 	 * @return Se l'autore di post è registrato e ha mandato una richiesta a questa
 	 * rete sociale, aggiunge il post alla medesima e ritorna true se l'operazione è 
 	 * riuscita, false altrimenti.
@@ -57,6 +63,7 @@ public interface SocialNetwork {
 	 * @requires post != null &amp; this.containsPost(post) &amp; 
 	 * post.getAuthor().hasSentRequest()
 	 * @param post Il post da rimuovere.
+	 * @modifies rimuove Post dalla lista dei post pubblicati da post.getAuthor()
 	 * @return Se l'autore di post ha mandato una richiesta a questa rete sociale e
 	 * post è presente, questi viene rimosso e per ogni altro utente user che dopo la
 	 * rimozione non ha più alcun like ai post di post.getAuthor(), questi non viene
@@ -75,7 +82,7 @@ public interface SocialNetwork {
 	 * @return Il TextPost scritto da username, se esiste
 	 * @throws IllegalArgumentException se id &le; 0
 	 * @throws NullPointerException se username == null
-	 * @throws UserException se this.isRegistered(username)
+	 * @throws UserException se !this.isRegistered(username)
 	 * @throws PostException se non esiste un post di username con questo id.
 	 */
 	public Post getPost(int id, String username);
@@ -100,6 +107,7 @@ public interface SocialNetwork {
 	 * &amp; user.hasSentRequest() 
 	 * @param user
 	 * 			L'utente da registrare.
+	 * @modifies aggiunge user in tutte le reti di this
 	 * @effects this.isRegistered(user) diventa true.
 	 * @throws NullPointerException se user == null
 	 * @throws UserException se this.isRegistered(user)
@@ -131,6 +139,7 @@ public interface SocialNetwork {
 	 *   //l'utente non ha già messo like allo stesso post
 	 * @param user L'utente che mette like
 	 * @param post Il Post a cui sarà messo like da user
+	 * @modifies Aggiunge ul Like al Post nel set di Like di User
 	 * @return Il TextPost aggiornato col nuovo like.
 	 * @effects se ritorna true, user sarà follower di post.getAuthor()
 	 * @throws NullPointerException se user == null
@@ -140,7 +149,7 @@ public interface SocialNetwork {
 	 * @throws PermissionDeniedException se this.isLikedByUser(post, user.getUsername())
 	 * @throws PermissionDeniedException se !user.hasSentRequest()
 	 */
-	public Post addLike(User user, Post post);
+	public boolean addLike(User user, Post post);
 	
 	/**
 	 * @requires username != null &amp; this.isRegistered(username)
@@ -177,7 +186,6 @@ public interface SocialNetwork {
 	 * @throws NullPointerException se ps == null
 	 * @throws PostException se esiste Post p : ps | p == null
 	 * @throws PostException se !this.containsPost(p)
-	 * @throws PostException se esiste Post p : ps | !this.isRegistered(p.getAuthor())
 	 */
 	public Map<String, Set<String>> guessFollowers(List<Post> ps);
 	
@@ -190,8 +198,7 @@ public interface SocialNetwork {
 	
 	/**
 	 * @requires ps != null &amp; forall Post p : ps, (p != null &amp; this.isRegistered(p.getAuthor())
-	 * @param ps
-	 * 			La lista di post da controllare.
+	 * @param ps La lista di post da controllare.
 	 * @return Un Set di stringhe che contiene tutti gli utenti registrati menzionati (taggati)
 	 * nella lista di post.
 	 * @throws NullPointerException se ps == null

@@ -11,6 +11,8 @@ import java.util.Set;
  * La classe implementa Cloneable per poter copiare un tag in modo da non permettere
  * l'accesso al tag originale dall'esterno, e ha un metodo statico getTagsFromText
  * che genera un insieme di tag da un testo.
+ * @RepInvariant tagText != null &amp; id &gt;0 
+ * @AbstractFunction f(tagText, id) = &lt;testo_post, codice identificativo&gt;
  * 
  * @author Salvatore Correnti
  */
@@ -34,7 +36,6 @@ public class Tag implements Cloneable {
 		this.id = Tag.currentMaxUsedId++;
 	}
 	
-	//FIXME "@Giuseppe dove sei @ ?"
 	/**
 	 * @requires text != null
 	 * @param text
@@ -44,7 +45,7 @@ public class Tag implements Cloneable {
 	 * @throws NullPointerException se text == null
 	 */
 	public static Set<Tag> getTagsFromText(String text){
-		if (text == null) throw new NullPointerException();
+		if (text == null) throw new NullPointerException("Testo non valido");
 		String[] textArr = text.split("@");
 		Set<Tag> tags = new HashSet<>();
 		for (int i = 1; i < textArr.length; i++) {

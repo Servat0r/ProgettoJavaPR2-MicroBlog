@@ -10,7 +10,10 @@ import microBlog.user.UserException;
 /**
  * Implementazione dell'interfaccia TextPost per rappresentare un post testuale.
  * Un TextPost ammette dei likes da parte degli utenti.
- * 
+ * @RepInvariant id &gt; 0 &amp; author != null &amp; text != null &amp;
+ * 				   per ogni &lt; tag &gt; t.c. tags &lt; tag &gt; != null allora tag!=null
+ * @AbstractFunction f(id, author, text, timestamp, tags,likes) = 
+ * &lt;codice_identificativo, nome_autore, testo, {&lt;Tag_0&gt; ,.., &lt;Tag_n&gt;}, {Like_0&gt; ,.., Like_m&gt;}&gt; 
  * @author Salvatore Correnti
  *
  */
@@ -137,6 +140,10 @@ public final class TextPost implements Post {
 	}
 	
 	public Post copy(Set<Like> newLikes) {
+		if (newLikes == null) throw new NullPointerException();
+		for (Like l : newLikes) {
+			if (l.getPost() != this) throw new IllegalArgumentException();
+		}
 		newLikes.addAll(this.likes);
 		return new TextPost(this, newLikes);
 	}
@@ -148,9 +155,9 @@ public final class TextPost implements Post {
 		w = w + "\nData e ora: " + this.getTimeStamp().toString();
 		w = w + "\nUtenti taggati: ";
 		for (Tag t : this.getTags()) {
-			w = w + t.getTagText() + "\n";
+			w = w + t.getTagText() + " ";
 		}
-		if (this.getTags().size() == 0) w = w + "\n";
+		w = w + "\n";
 		int r = this.getLikes().size();
 		w = w + "Piace a: " + r + (r == 1 ? " persona" : " persone" );
 		return w;

@@ -1,18 +1,24 @@
 package microBlog.post;
 
 import java.util.Date;
+
+
+import microBlog.network.PermissionDeniedException;
 import microBlog.user.User;
 
 
 /**
  * Modella un like che un utente può aggiungere al post di un altro utente.
- * A differenza di un TextPost, un Like non viene pubblicato come post a sé stante,
+ * A differenza di un TextPost, un Like non viene pubblicato come post a se' stante,
  * ma come like di un altro post, e non è possibile aggiungere like ad un Like.
- * 
+ * @RepInvariant id &gt; 0 &amp; author != null &amp; text != null &amp;
+ * 				   per ogni &lt; tag &gt; t.c. tags &lt; tag &gt; != null allora tag!=null
+ * @AbstractFunction f(id, author, post, receiver, timestamp) = 
+ * 					  &lt;codice_identificativo, User(), TextPost(), User(), Data()&gt; 
  * @author Salvatore Correnti
  * 
  */
-public final class Like implements Publishable {
+public final class Like {
 
 	//Massimo id usato finora
 	private static int currentMaxId = 1;
@@ -23,15 +29,21 @@ public final class Like implements Publishable {
 	private final User receiver;
 	private final Date timestamp;
 	
-	//TODO Aggiungere eccezioni
 	/**
 	 * Costruttore pubblico di default per Like.
 	 * @requires author != null &amp; post != null &amp; this.getAuthor() e
 	 * post.getAuthor() devono essere entrambi registrati alla stessa rete sociale
 	 * @param author L'autore del Like.
 	 * @param post Il post a cui è stato messo Like.
+	 * @throws NullPointerException se author == null || post==null
+	 * @throws PermissionDeniedException se author non ha mandato la richiesta || 
+	 * 		   se post.getAuthor().getUsername()== author.getUsername()
 	 */
 	public Like(User author, Post post) {
+		if (author == null) throw new NullPointerException();
+		if (post == null) throw new NullPointerException();
+		if (post.getAuthor().getUsername()== author.getUsername()) throw new PermissionDeniedException();
+		if (!author.hasSentRequest()) throw new PermissionDeniedException();
 		this.id = Like.currentMaxId++;
 		this.author = author;
 		this.post = post;
@@ -45,7 +57,12 @@ public final class Like implements Publishable {
 		result = prime * result + id;
 		return result;
 	}
-
+	
+	/**
+	 * @requires obj!=null
+	 * @param obj a cui comparare this.
+	 * @throws NullPointerException se obj==null
+	 */
 	public boolean equals(Object obj) {
 		if (this == obj)
 			return true;

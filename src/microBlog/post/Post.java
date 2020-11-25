@@ -5,22 +5,45 @@ import java.util.Date;
 import java.util.Set;
 
 import microBlog.user.User;
+/**
+ * Tipo di dato astratto rappresentante un post.
+ */
 
 /**
- * Modella un post, i.e. un'entità che può essere creata da un utente e pubblicata
+ * @overview Modella un post, i.e. un'entità che può essere creata da un utente e pubblicata
  * sulla rete sociale, ed è visibile a tutti gli altri utenti.
  * Un Post è caratterizzato da: autore, id, testo (di max 140 caratteri), data e ora 
  * di pubblicazione. Esempi di post sono:
  * - TextPost, il Post standard per pubblicare messaggi di testo;
  * - Like, un post che rappresenta un like che un utente può mettere a un Post di
  *   un altro utente.
- * 
+ * @TypicalElement &lt;id,author,data,text,set &lt; tag &gt; ,set &lt; tag &gt;&gt; un generico elemento è caratterizzato
+ * semplicemente da una insieme di dati che identificano autore, data, codice identificativo, insieme dei tag del post
+ * e like ricevuti dal Post
+ *  
  * @author Salvatore Correnti
  * 
- *
  */
 
-public interface Post extends Publishable {
+public interface Post {
+	
+	/**
+	 * @requires 
+	 * @return L'id del post.
+	 */
+	public int getId();
+	
+	/**
+	 * @requires
+	 * @return L'autore del post.
+	 */
+	public User getAuthor();
+	
+	/**
+	 * @requires
+	 * @return La data e l'ora di pubblicazione del post.
+	 */
+	public Date getTimeStamp();
 	
 	/**
 	 * @requires

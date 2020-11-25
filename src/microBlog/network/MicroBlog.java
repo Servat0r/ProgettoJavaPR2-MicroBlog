@@ -1,14 +1,13 @@
 package microBlog.network;
 
 import java.util.ArrayList;
+
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
 
 import microBlog.post.*;
 import microBlog.user.*;
@@ -16,7 +15,14 @@ import microBlog.user.*;
 
 /**
  * Implementazione dell'interfaccia SocialNetwork.
- * 
+ * @RepInvariant per ogni Post p: Map&lt;Utente,Set&lt;Post&gt;&gt; p!= pi per ogni pi : Map&lt;Utente,Set&lt;Post&gt;&gt;\{p} 
+ *  				&amp; per ogni pi : Map&lt;user,Set&lt;Post&gt;&gt; Utente !=null &amp; pi!=null <br>
+ *  				per ogni Username u: Map&lt;Username_utente_a,Set&lt;Username_utente_i&gt;&gt; u!= ui per ogni ui : Map&lt;Usarname_utente_a,Set&lt;Username_utente_i&gt;&gt;\{u}
+ *  				&amp; per ogni ui : Map&lt;Username_utente,Set&lt;Username_utente&gt;&gt; Username !=null &amp; ui!=null
+ *  				&amp; per ogni coppia (Username,n_followers )  Username1!=null
+ * @AbstractFunction &lt;posts,network,followersCount&gt;= &lt;{Utente_0,{Post0_utente0,..., PostN_utente0)},...{Utente_M,{Post0_utenteM,..., PostN_utenteM)}}},
+ * 				    {Utente_0,{Utenteseguito0_utente0,..., UtenteseguitoN_utente0)},..., {Utente_M,{Utenteseguito0_utenteM,..., UtenteseguitoN_utenteM)}} 
+ * 					{(Utente_0,N_followers),..., (Utente_M,N_followers)	&gt; 
  * @author Salvatore Correnti
  *
  * @see SocialNetwork 
@@ -37,7 +43,6 @@ public class MicroBlog implements SocialNetwork {
 	 */
 	private Map<String, Set<String>> network;
 	
-	//TODO Da cambiare in lista ordinata (manualmente) in senso decrescente
 	/**
 	 * Una lista ordinata di Pair che contengono il numero di followers per ogni
 	 * utente della rete, utilizzato principalmente per il metodo 
@@ -66,13 +71,13 @@ public class MicroBlog implements SocialNetwork {
 
 	public boolean storePost(Post post) {
 		if (post == null) throw new NullPointerException();
-		if (this.containsPost(post)) throw new IllegalArgumentException("Post is already stored!");
+		if (this.containsPost(post)) throw new IllegalArgumentException("Il post esiste già!");
 		if (!this.isRegistered(post.getAuthor().getUsername()))
-			throw new PermissionDeniedException(); //L'utente non è nella rete
+			throw new PermissionDeniedException("Non appartieni a questa rete!"); //L'utente non è nella rete
 		/* Grazie a quanto sopra possiamo affermare che this.contains(post) =>
 		   this.isRegistered(post.getAuthor().getUsername()) */
-		if (!post.getAuthor().hasSentRequest()) throw new PermissionDeniedException();
-		if (post.getText() == null) throw new PostException();
+		if (!post.getAuthor().hasSentRequest()) throw new PermissionDeniedException("Accesso negato");
+		if (post.getText() == null) throw new PostException("Testo del post inesistente");
 		String author = post.getAuthor().getUsername();
 		if (!this.posts.containsKey(author)) { //Non ha mai postato
 			Set<Post> sp = new HashSet<>();
@@ -83,8 +88,8 @@ public class MicroBlog implements SocialNetwork {
 	
 	public boolean removePost(Post post) {
 		if (post == null) throw new NullPointerException();
-		if (!this.containsPost(post)) throw new PostException();
-		if (!post.getAuthor().hasSentRequest()) throw new PermissionDeniedException();
+		if (!this.containsPost(post)) throw new PostException("Post non presente");
+		if (!post.getAuthor().hasSentRequest()) throw new PermissionDeniedException("Accesso negato");
 		String author = post.getAuthor().getUsername();
 		boolean b = this.posts.get(author).remove(post);
 		TextPost tp = (TextPost)post;
@@ -104,14 +109,14 @@ public class MicroBlog implements SocialNetwork {
 	//User methods
 	
 	public boolean isRegistered(String username) {
-		if (username == null) throw new NullPointerException();
+		if (username == null) throw new NullPointerException("Username non valido");
 		return this.network.containsKey(username);
 	}
 
 	public void registerUser(User user) { 
-		if (user == null) throw new NullPointerException();
-		if (this.isRegistered(user.getUsername())) throw new UserException();
-		if (!user.hasSentRequest()) throw new PermissionDeniedException();
+		if (user == null) throw new NullPointerException("Utente non valido");
+		if (this.isRegistered(user.getUsername())) throw new UserException("Utente già registrato");
+		if (!user.hasSentRequest()) throw new PermissionDeniedException("Accesso negato");
 		//Inserisce due insiemi vuoti di post e di persone seguite.
 		Set<Post> sp = new HashSet<Post>();
 		Set<String> t = new HashSet<String>();
@@ -138,8 +143,8 @@ public class MicroBlog implements SocialNetwork {
 	}
 
 	public boolean isFollowing(String following, String followed) {
-		if (following == null) throw new NullPointerException();
-		if (followed == null) throw new NullPointerException();
+		if (following == null) throw new NullPointerException("Username non valido");
+		if (followed == null) throw new NullPointerException("Username non valido");
 		return this.network.get(following).contains(followed);
 	}
 	
@@ -157,8 +162,8 @@ public class MicroBlog implements SocialNetwork {
 	 * @throws UserException se follower.equals(followed)
 	 */
 	private boolean followUser(String follower, String followed) {
-		if (follower == null || followed == null) throw new NullPointerException();
-		if (follower.equals(followed)) throw new UserException();
+		if (follower == null || followed == null) throw new NullPointerException("Username non valido");
+		if (follower.equals(followed)) throw new UserException("Username non valido");
 		boolean b = this.network.get(follower).add(followed);
 		if (b) {
 			Iterator<Pair<String>> ips = this.followersCount.iterator();
@@ -195,10 +200,10 @@ public class MicroBlog implements SocialNetwork {
 	 * @throws UserException se !this.isRegistered(unfollowed)
 	 */
 	private boolean unFollowUser(String unfollower, String unfollowed) {
-		if (unfollower == null) throw new NullPointerException();
-		if (unfollowed == null) throw new NullPointerException();
-		if (!this.isRegistered(unfollower)) throw new UserException();
-		if (!this.isRegistered(unfollower)) throw new UserException();
+		if (unfollower == null) throw new NullPointerException("Username non valido");
+		if (unfollowed == null) throw new NullPointerException("Username non valido");
+		if (!this.isRegistered(unfollower)) throw new UserException("Username non valido");
+		if (!this.isRegistered(unfollower)) throw new UserException("Username non valido");
 		boolean b = this.network.get(unfollower).remove(unfollowed);
 		if (b) {
 			Iterator<Pair<String>> ips = this.followersCount.iterator();
@@ -239,7 +244,6 @@ public class MicroBlog implements SocialNetwork {
 		}
 	}
 	
-	//TODO Va fatta così (cioè per ogni like aggiungi un follower)?
 	public Map<String, Set<String>> guessFollowers(List<Post> ps) {
 		checkForExceptions(ps); /* Ci dice automaticamente che tutti i post di ps
 		sono in questa rete */
@@ -254,7 +258,6 @@ public class MicroBlog implements SocialNetwork {
 		return map;
 	}
 	
-	//TODO Non va cambiato nel passaggio da Set a List
 	public List<String> influencers() {
 		List<String> infl = new ArrayList<>(this.network.keySet().size());
 		//Sono inseriti in ordine
@@ -272,7 +275,8 @@ public class MicroBlog implements SocialNetwork {
 		return s;
 	}
 
-	//TODO Qualcosa non va perché getMentionedUsers() non stampava correttamente i tag
+
+	
 	public Set<String> getMentionedUsers(List<Post> ps) { //Safe
 		checkForExceptions(ps);
 		Set<String> s = new HashSet<String>();
@@ -282,10 +286,11 @@ public class MicroBlog implements SocialNetwork {
 		return s;
 	}
 	
-	//TODO Questo sembra che funzioni
+	
+	
 	public List<Post> writtenBy(String username) { //Safe
-		if (username == null) throw new NullPointerException();
-		if (!this.isRegistered(username)) throw new UserException();
+		if (username == null) throw new NullPointerException("Username non valido");
+		if (!this.isRegistered(username)) throw new UserException("Username non valido");
 		List<Post> sp = new ArrayList<Post>();
 		for (Post p : this.posts.get(username)) {
 			sp.add(p);
@@ -295,9 +300,9 @@ public class MicroBlog implements SocialNetwork {
 	
 	public List<Post> writtenBy(List<Post> ps, String username) { //Safe
 		checkForExceptions(ps);
-		if (username == null) throw new NullPointerException();
+		if (username == null) throw new NullPointerException("Username non valido");
 		if (ps == null) throw new NullPointerException();
-		if (!this.isRegistered(username)) throw new UserException();
+		if (!this.isRegistered(username)) throw new UserException("Username non valido");
 		for (Post p : ps) {
 			if (p == null) throw new PostException();
 			if (!this.isRegistered(p.getAuthor().getUsername())) 
@@ -329,22 +334,22 @@ public class MicroBlog implements SocialNetwork {
 	}
 	/**
 	 * Metodo privato di supporto a containing(List di String).
-	 * @param user L'utente di cui si analizzano i post.
+	 * @param username L'utente di cui si analizzano i post.
 	 * @param words Le parole da analizzare.
 	 * @return Una List di Post che contiene esattamente i post scritti da user che contengono
 	 * almeno una parola fra quelle fornite in words.
-	 * @throws NullPointerException se user == null
+	 * @throws NullPointerException se username == null
 	 * @throws NullPointerException se words == null
 	 * @throws IllegalArgumentException se esiste String w : words | w == null
 	 */
-	private List<Post> containingInUserPosts(String user, List<String> words){ //Safe
-		if (user == null) throw new NullPointerException();
+	private List<Post> containingInUserPosts(String username, List<String> words){ //Safe
+		if (username == null) throw new NullPointerException("Username non valido");
 		if (words == null) throw new NullPointerException();
 		for (String w : words) {
 			if (w == null) throw new IllegalArgumentException();
 		}
 		List<Post> l = new ArrayList<Post>();
-		for(Post p : this.posts.get(user)) {
+		for(Post p : this.posts.get(username)) {
 			if (postContains(p, words)) {
 				l.add(p);
 			}
@@ -364,24 +369,27 @@ public class MicroBlog implements SocialNetwork {
 		return l;
 	}
 	
+	
 	public Post getPost(int id, String username) {
-		if (id <= 0) throw new IllegalArgumentException();
+		if (id <= 0) throw new IllegalArgumentException("Id non valido");
+		if (username == null) throw new UserException("Username non valido");
+		if (!this.isRegistered(username)) throw new UserException("Utente non registrato");
 		List<Post> lp = this.writtenBy(username);
 		for (Post p : lp) {
 			if (p.getId() == id) return p;
 		}
-		throw new PostException("Questo id non è associato con nessun post della rete!");
+		throw new PostException("Questo id non è associato con nessun post di questo utente nella rete!");
 	}
 
-	public Post addLike(User user, Post post) {
+	public boolean addLike(User user, Post post) {
 		if (user == null) throw new NullPointerException();
 		if (post == null) throw new NullPointerException();
-		if (!this.containsPost(post)) throw new PostException(); /* Se la rete corrente
+		if (!this.containsPost(post)) throw new PostException("Post inesistente"); /* Se la rete corrente
 		contiene post, allora necessariamente il suo autore è registrato */
-		if (!this.isRegistered(user.getUsername())) throw new UserException();
+		if (!this.isRegistered(user.getUsername())) throw new UserException("Utente non registrato");
 		if (this.isLikedByUser(post, user.getUsername()))
-			throw new PermissionDeniedException();
-		if (!user.hasSentRequest()) throw new PermissionDeniedException();
+			throw new PermissionDeniedException("Permesso negato");
+		if (!user.hasSentRequest()) throw new PermissionDeniedException("Accesso negato");
 		String liker = user.getUsername();
 		String liked = post.getAuthor().getUsername();
 		this.posts.get(liked).remove(post);
@@ -389,10 +397,10 @@ public class MicroBlog implements SocialNetwork {
 		Set<Like> sl = new HashSet<Like>(post.getLikes());
 		sl.add(l);
 		post = post.copy(sl); //Viene creato un nuovo oggetto (!)
-		this.posts.get(liked).add(post); /*Se è false allora qualcosa 
+		boolean b = this.posts.get(liked).add(post); /*Se è false allora qualcosa 
 		non ha funzionato */
 		if (!isFollowing(liker, liked)) followUser(liker, liked);
-		return post; //TODO Aggiustare
+		return b;
 	}
 	
 	/**
@@ -430,12 +438,11 @@ public class MicroBlog implements SocialNetwork {
 		throw new UserException(); //L'utente non è registrato
 	}
 
-	//TODO Questo (se non si possono rimuovere i likes) sembra che funzioni
 	public boolean isLikedByUser(Post post, String username) {
 		if (post == null) throw new NullPointerException();
-		if (username == null) throw new NullPointerException();
-		if (!this.isRegistered(post.getAuthor().getUsername())) throw new UserException();
-		if (!this.isRegistered(username)) throw new UserException();
+		if (username == null) throw new NullPointerException("Username non valido");
+		if (!this.isRegistered(post.getAuthor().getUsername())) throw new UserException("Utente inesistente");
+		if (!this.isRegistered(username)) throw new UserException("Utente inesistente");
 		Set<Like> sl = ((TextPost)post).getLikes();
 		for (Like l : sl) if (l.getAuthor().getUsername().equals(username)) return true;
 		return false;

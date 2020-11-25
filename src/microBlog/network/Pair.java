@@ -1,7 +1,7 @@
 package microBlog.network;
 
 /**
- * Semplice utility per rappresentare una coppia di elementi, utilizzata nella classe
+ * Semplice utility per rappresentare una coppia di interi ed oggetti di tipo generico, utilizzata nella classe
  * MicroBlog.
  * 
  * @author Salvatore Correnti

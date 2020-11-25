@@ -2,26 +2,30 @@ package microBlog.user;
 
 import java.util.Date;
 import java.util.List;
+import microBlog.network.PermissionDeniedException;
 
 import microBlog.post.*;
 
 /**
- * Modella un utente della rete sociale MicroBlog. Un utente è un oggetto che può:
- * - registrarsi a o cancellarsi da una rete sociale;
+ * Tipo di dato astratto rappresentante un utente della rete. 
+ */
+
+/**
+ * @overview Modella un utente della rete sociale MicroBlog. Un utente e' un oggetto che puo':
+ * - registrarsi a una rete sociale;
  * - pubblicare o rimuovere post;
- * - aggiungere o rimuovere like ai post di un altro utente (e dunque rispettivamente
- *   seguirlo oppure smettere di seguirlo);
- * - sono inclusi altri utility methods (getPosts, getLikes).
+ * - aggiungere like ai post di un altro utente (e dunque rispettivamente seguirlo);
+ * - sono inclusi altri utility methods (getMyPosts).
  * 
- * Dopo essere stato creato, un utente può registrarsi a UNA SOLA rete sociale, e in
- * tal caso potrà interagire (pubblicare/rimuovere post, aggiungere/rimuovere likes)
+ * Dopo essere stato creato, un utente puo' registrarsi a UNA SOLA rete sociale, e in
+ * tal caso potrà interagire (pubblicare/rimuovere post, aggiungere likes)
  * solo con essa.
- * I metodi register, unregister, writePost, removePost, addLike, removeLike chiamano
- * i corrispondenti metodi della rete sociale dell'utente comunicandogli che è l'utente
- * stesso ad averne fatto richiesta, pertanto è garantito che SOLO l'utente può modificare
+ * I metodi register, writePost, removePost, addLike, chiamano
+ * i corrispondenti metodi della rete sociale dell'utente comunicandogli che e' l'utente
+ * stesso ad averne fatto richiesta, pertanto e' garantito che SOLO l'utente può modificare
  * effettivamente i propri dati (insieme di post, likes e persone seguite) sulla rete.
  * L'utente non comunica con la rete direttamente attraverso i post, ma solo attraverso
- * gli id dei medesimi, attraverso i metodi getTextPostIds e getLikeIds.
+ * gli id dei medesimi ottenuti tramite writePost().
  * @author Salvatore Correnti
  *
  */
@@ -49,43 +53,36 @@ public interface User {
 	/**
 	 * @requires text != null &amp; Post.checkTextLength(text)
 	 * @param text Il testo del post
-	 * @return Crea un TextPost con testo text e restituisce un riferimento a questi.
+	 * @modifies viene aggiunto un nuov elemento Post a this.net
+	 * @return Crea un TextPost con testo text e restituisce un riferimento id a questi.
 	 * @throws NullPointerException se text == null
 	 * @throws PostException se !Post.checkTextLength(text)
-	 * @throws PostException se è taggato un utente non presente nella rete
+	 * 		   PostException se è taggato un utente non presente nella rete
 	 */
-	public Post writePost(String text);
+	public int writePost(String text);
+	
 	
 	/**
-	 * @requires tp != null &amp; this.equals(tp.getAuthor()) &amp; tp è contenuto
-	 * nella stessa rete di this
-	 * @param p Il TextPost da eliminare.
+	 * @requires id &gt; 0 
+	 * @param id Il TextPost da eliminare.
+	 * @modifies rimuove il post dal SocialNetwork in cui e' pubblicato
 	 * @return true se il post è stato rimosso con successo, false altrimenti
 	 * @throws NullPointerException se tp == null
 	 * @throws PermissionDeniedException se !this.equals(tp.getAuthor())
 	 * @throws PostException se tp non è nella stessa rete di this
 	 */
-	public boolean removePost(Post p);
+	public boolean removePost(int id);
 	
-	//TODO In questo modo non si può mettere like a un proprio post
+	//TODO Changed
 	/**
-	 * @requires tp != null &amp; !this.equals(tp.getAuthor()) &amp; tp è nella stessa
-	 * rete di this
-	 * @param tp Il TextPost a cui mettere il like.
-	 * @return Il TextPost aggiornato col nuovo like.
+	 * @requires id &gt; 0 e this.getUsername() e username devono 
+	 * essere utenti della stessa rete.
+	 * @param id Il TextPost a cui mettere il like.
+	 * @param username Il nome dell'utente a cui si vuole mettere like.
+	 * @return true se e' stato aggiunto con successo false altrimenti.
 	 * @throws PostException se tp non è nella stessa rete di this
 	 * @throws NullPointerException se username == null
 	 * @throws PermissionDeniedException se this.equals(tp.getAuthor())
 	 */
-	public Post addLike(Post tp);
-	
-	/**
-	 * @requires username != null &amp; this.getUsername() e username devono 
-	 * essere utenti della stessa rete.
-	 * @return Una lista dei TextPost scritti da username.
-	 * @throws NullPointerException se username == null
-	 * @throws UserException se this.getUsername() e username non sono utenti 
-	 * della stessa rete.
-	 */
-	public List<Post> getPost(String username); 
+	public boolean addLike(int id, String username);
 }
